@@ -27,6 +27,7 @@ services:
       ASPNETCORE_URLS: http://+:8080
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__DefaultConnection: "Host=db;Database=rosterly;Username=rosterly;Password=rosterly"
+      Clerk__Issuer: "${CLERK_ISSUER}"
     depends_on:
       db:
         condition: service_healthy
@@ -35,6 +36,8 @@ services:
     build:
       context: ./client
       dockerfile: Dockerfile
+      args:
+        VITE_CLERK_PUBLISHABLE_KEY: "${VITE_CLERK_PUBLISHABLE_KEY}"
     container_name: rosterly-client
     ports:
       - "80:80"
