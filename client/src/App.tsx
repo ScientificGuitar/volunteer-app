@@ -1,4 +1,4 @@
-import { Show, UserButton, useClerk } from "@clerk/react"
+import { Show, SignInButton, SignUpButton, UserButton, useClerk } from "@clerk/react"
 import { Moon, Sun } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
