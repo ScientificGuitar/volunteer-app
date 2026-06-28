@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using RosterlyApi.Endpoints;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -47,10 +48,20 @@ app.UseAuthorization();
 
 app.MapGet("/", () => "Hello World!");
 
-app.MapGet("/api/user/me", (HttpContext http) =>
+app.MapGet("/api/user/me", async (HttpContext http, AppDbContext db) =>
 {
     var userId = http.User.FindFirst("sub")?.Value;
-    return Results.Ok(new { UserId = userId });
+    if (userId is null) return Results.Unauthorized();
+
+    var org = await db.Organizations.FirstOrDefaultAsync(o => o.ClerkUserId == userId);
+
+    return Results.Ok(new
+    {
+        UserId = userId,
+        Organization = org is null ? null : new { org.Id, org.Name }
+    });
 }).RequireAuthorization();
+
+app.MapAdminEndpoints();
 
 app.Run();
