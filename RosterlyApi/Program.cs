@@ -63,5 +63,6 @@ app.MapGet("/api/user/me", async (HttpContext http, AppDbContext db) =>
 }).RequireAuthorization();
 
 app.MapAdminEndpoints();
+app.MapPublicEndpoints();
 
 app.Run();

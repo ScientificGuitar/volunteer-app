@@ -11,6 +11,10 @@
 - `RosterlyApi/` — .NET API project
 - `client/` — React frontend
 
+## Git convention
+
+- Use [gitmoji](https://gitmoji.dev) for commit types (e.g. `:sparkles:` for features, `:bug:` for fixes, `:recycle:` for refactors)
+
 ## Dev commands
 
 **Frontend** (`client/`):
