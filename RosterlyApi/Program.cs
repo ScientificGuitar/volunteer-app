@@ -66,3 +66,5 @@ app.MapAdminEndpoints();
 app.MapPublicEndpoints();
 
 app.Run();
+
+public partial class Program { }

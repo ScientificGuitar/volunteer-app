@@ -1,0 +1,321 @@
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using RosterlyApi.Entities;
+using Xunit;
+
+namespace RosterlyApi.Tests;
+
+public class AdminEndpointTests : IClassFixture<IntegrationTestFactory>
+{
+    private readonly IntegrationTestFactory _factory;
+    private readonly HttpClient _client;
+    private readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
+    public AdminEndpointTests(IntegrationTestFactory factory)
+    {
+        _factory = factory;
+        _client = factory.CreateClient();
+    }
+
+    // --- Organization ---
+
+    [Fact]
+    public async Task CreateOrganization_Returns201()
+    {
+        var response = await _client.PostAsJsonAsync("/api/organizations", new { name = "Test Church" });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        Assert.Equal("Test Church", body.GetProperty("name").GetString());
+        Assert.NotEqual(Guid.Empty, body.GetProperty("id").GetGuid());
+    }
+
+    [Fact]
+    public async Task GetOrganization_ReturnsOrgWithInviteLinks()
+    {
+        var orgId = await SeedOrgAsync("Org With Links");
+
+        var response = await _client.GetAsync($"/api/organizations/{orgId}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        Assert.Equal("Org With Links", body.GetProperty("name").GetString());
+        Assert.True(body.TryGetProperty("inviteLinks", out _));
+    }
+
+    [Fact]
+    public async Task GetOrganization_OtherUsersOrg_Returns404()
+    {
+        var otherOrgId = Guid.NewGuid();
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.Organizations.Add(new Organization
+            {
+                Id = otherOrgId,
+                Name = "Other Org",
+                ClerkUserId = TestAuthHandler.OtherUserId,
+                CreatedAt = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var response = await _client.GetAsync($"/api/organizations/{otherOrgId}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    // --- Events ---
+
+    [Fact]
+    public async Task CreateEvent_Returns201()
+    {
+        var orgId = await SeedOrgAsync("Event Org");
+
+        var response = await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events", new
+        {
+            title = "Sunday Service",
+            date = "2026-07-12"
+        });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        Assert.Equal("Sunday Service", body.GetProperty("title").GetString());
+    }
+
+    [Fact]
+    public async Task CreateEvent_WithInlineSlots_Returns201WithSlots()
+    {
+        var orgId = await SeedOrgAsync("Slots Org");
+
+        var response = await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events", new
+        {
+            title = "Service With Slots",
+            date = "2026-07-12",
+            slots = new[]
+            {
+                new { label = "Morning", startTime = "08:00", endTime = "09:00", capacity = 3 },
+                new { label = "Evening", startTime = "18:00", endTime = "19:00", capacity = 5 }
+            }
+        });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        // Verify slots appear in roster
+        var roster = await _client.GetFromJsonAsync<JsonElement>(
+            $"/api/organizations/{orgId}/roster?weekStart=2026-07-06", _jsonOptions);
+        var events = roster.EnumerateArray().ToList();
+        var evt = events.First(e => e.GetProperty("title").GetString() == "Service With Slots");
+        var slots = evt.GetProperty("slots").EnumerateArray().ToList();
+        Assert.Equal(2, slots.Count);
+    }
+
+    [Fact]
+    public async Task ListEvents_ByDateRange_ReturnsFilteredEvents()
+    {
+        var orgId = await SeedOrgAsync("List Org");
+
+        await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events", new { title = "Event 1", date = "2026-07-05" });
+        await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events", new { title = "Event 2", date = "2026-07-12" });
+        await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events", new { title = "Event 3", date = "2026-07-19" });
+
+        var response = await _client.GetAsync($"/api/organizations/{orgId}/events?from=2026-07-10&to=2026-07-15");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        var titles = body.EnumerateArray().Select(e => e.GetProperty("title").GetString()).ToList();
+        Assert.Contains("Event 2", titles);
+        Assert.DoesNotContain("Event 1", titles);
+        Assert.DoesNotContain("Event 3", titles);
+    }
+
+    [Fact]
+    public async Task UpdateEvent_UpdatesFields()
+    {
+        var orgId = await SeedOrgAsync("Update Org");
+        var create = await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events",
+            new { title = "Old Title", date = "2026-07-12" });
+        var created = await create.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        var eventId = created.GetProperty("id").GetGuid();
+
+        var response = await _client.PutAsJsonAsync($"/api/events/{eventId}",
+            new { title = "New Title" });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        Assert.Equal("New Title", body.GetProperty("title").GetString());
+    }
+
+    [Fact]
+    public async Task DeleteEvent_RemovesEvent()
+    {
+        var orgId = await SeedOrgAsync("Delete Org");
+        var create = await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events",
+            new { title = "To Delete", date = "2026-07-12" });
+        var created = await create.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        var eventId = created.GetProperty("id").GetGuid();
+
+        var response = await _client.DeleteAsync($"/api/events/{eventId}");
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        var roster = await _client.GetFromJsonAsync<JsonElement>(
+            $"/api/organizations/{orgId}/roster?weekStart=2026-07-06", _jsonOptions);
+        Assert.Empty(roster.EnumerateArray());
+    }
+
+    // --- Slots ---
+
+    [Fact]
+    public async Task CreateSlot_Returns201()
+    {
+        var orgId = await SeedOrgAsync("Slot Org");
+        var create = await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events",
+            new { title = "Slot Event", date = "2026-07-12" });
+        var created = await create.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        var eventId = created.GetProperty("id").GetGuid();
+
+        var response = await _client.PostAsJsonAsync($"/api/events/{eventId}/slots", new
+        {
+            label = "Test Slot",
+            startTime = "10:00",
+            endTime = "11:00",
+            capacity = 4
+        });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        Assert.Equal("Test Slot", body.GetProperty("label").GetString());
+    }
+
+
+
+    [Fact]
+    public async Task DeleteSlot_RemovesSlot()
+    {
+        var orgId = await SeedOrgAsync("Del Slot Org");
+        var createEvt = await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events",
+            new { title = "Del Slot Event", date = "2026-07-12" });
+        var evt = await createEvt.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        var eventId = evt.GetProperty("id").GetGuid();
+
+        var createSlot = await _client.PostAsJsonAsync($"/api/events/{eventId}/slots",
+            new { label = "To Delete", startTime = "09:00", endTime = "10:00", capacity = 2 });
+        var slot = await createSlot.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        var slotId = slot.GetProperty("id").GetGuid();
+
+        var response = await _client.DeleteAsync($"/api/events/{eventId}/slots/{slotId}");
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    }
+
+    // --- Roster ---
+
+    [Fact]
+    public async Task GetRoster_ReturnsWeeklyData()
+    {
+        var orgId = await SeedOrgAsync("Roster Org");
+        var create = await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events", new
+        {
+            title = "Roster Event",
+            date = "2026-07-08",
+            slots = new[] { new { label = "Slot 1", startTime = "08:00", endTime = "09:00", capacity = 2 } }
+        });
+        Assert.Equal(HttpStatusCode.Created, create.StatusCode);
+
+        var response = await _client.GetAsync($"/api/organizations/{orgId}/roster?weekStart=2026-07-06");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        var events = body.EnumerateArray().ToList();
+        Assert.NotEmpty(events);
+        Assert.Contains(events, e => e.GetProperty("title").GetString() == "Roster Event");
+    }
+
+    [Fact]
+    public async Task GetRoster_EmptyWeek_ReturnsEmptyList()
+    {
+        var orgId = await SeedOrgAsync("Empty Org");
+
+        var response = await _client.GetAsync($"/api/organizations/{orgId}/roster?weekStart=2025-01-06");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        Assert.Empty(body.EnumerateArray());
+    }
+
+    // --- Signups ---
+
+    [Fact]
+    public async Task AdminDeleteSignup_RemovesSignup()
+    {
+        var (orgId, eventId, slotId) = await SeedSlotAsync("Admin Del Signup");
+
+        // Create an invite link, sign up via public endpoint
+        var linkResp = await _client.PostAsJsonAsync($"/api/organizations/{orgId}/invite-links", new { });
+        var link = await linkResp.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        var code = link.GetProperty("code").GetString()!;
+
+        var signupResp = await _client.PostAsJsonAsync($"/api/invite/{code}/signups",
+            new { slotId, volunteerName = "Jane" });
+        var signup = await signupResp.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        var signupId = signup.GetProperty("id").GetGuid();
+
+        var response = await _client.DeleteAsync($"/api/signups/{signupId}");
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    }
+
+    // --- Invite Links ---
+
+    [Fact]
+    public async Task CreateInviteLink_ReturnsLinkWithCode()
+    {
+        var orgId = await SeedOrgAsync("Link Org");
+
+        var response = await _client.PostAsJsonAsync($"/api/organizations/{orgId}/invite-links", new { });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        var code = body.GetProperty("code").GetString();
+        Assert.NotNull(code);
+        Assert.Equal(8, code!.Length);
+        Assert.True(body.GetProperty("isActive").GetBoolean());
+    }
+
+    // --- Helpers ---
+
+    private async Task<Guid> SeedOrgAsync(string name)
+    {
+        var response = await _client.PostAsJsonAsync("/api/organizations", new { name });
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        return body.GetProperty("id").GetGuid();
+    }
+
+    private async Task<(Guid orgId, Guid eventId, Guid slotId)> SeedSlotAsync(string orgName)
+    {
+        var orgId = await SeedOrgAsync(orgName);
+        var createEvt = await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events", new
+        {
+            title = "Test Event",
+            date = "2026-07-12",
+            slots = new[] { new { label = "Test Slot", startTime = "09:00", endTime = "10:00", capacity = 3 } }
+        });
+        var evt = await createEvt.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        var eventId = evt.GetProperty("id").GetGuid();
+
+        // Fetch the roster to get the slot ID
+        var roster = await _client.GetFromJsonAsync<JsonElement>(
+            $"/api/organizations/{orgId}/roster?weekStart=2026-07-06", _jsonOptions);
+        var slotId = roster.EnumerateArray().First()
+            .GetProperty("slots").EnumerateArray().First()
+            .GetProperty("id").GetGuid();
+
+        return (orgId, eventId, slotId);
+    }
+}
