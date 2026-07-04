@@ -14,6 +14,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.Authority = clerkIssuer;
+        options.MapInboundClaims = false;
         options.TokenValidationParameters = new()
         {
             ValidateIssuer = true,
