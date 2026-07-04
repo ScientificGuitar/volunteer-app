@@ -30,6 +30,7 @@ public class AppDbContext : DbContext
                 .WithMany(o => o.Events)
                 .HasForeignKey(e => e.OrganizationId)
                 .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(e => new { e.OrganizationId, e.Date });
         });
 
         modelBuilder.Entity<TimeSlot>(entity =>

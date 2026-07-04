@@ -7,31 +7,18 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useOrg } from "@/hooks/useOrg"
 import { useApi } from "@/hooks/useApi"
+import { useOrganization } from "@/hooks/useOrganization"
 import type { InviteLinkInfo } from "@/lib/types"
 
 export function InviteLinks() {
   const { org } = useOrg()
   const api = useApi()
+  const { data: orgDetail, isLoading } = useOrganization(org?.id)
   const [links, setLinks] = useState<InviteLinkInfo[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!org) return
-    setLoading(true)
-    setError(null)
-
-    api.getOrganization(org.id)
-      .then((data) => {
-        setLinks(data.inviteLinks)
-      })
-      .catch((e) => {
-        const msg = e instanceof Error ? e.message : "Failed to load invite links"
-        setError(msg)
-        toast.error(msg)
-      })
-      .finally(() => setLoading(false))
-  }, [org, api])
+    setLinks(orgDetail?.inviteLinks ?? [])
+  }, [orgDetail])
 
   const handleCreate = async () => {
     if (!org) return
@@ -70,6 +57,15 @@ export function InviteLinks() {
 
   if (!org) return null
 
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-lg">
+        <h1 className="mb-6 text-2xl font-bold">Invite Links</h1>
+        <div className="py-12 text-center text-muted-foreground">Loading...</div>
+      </div>
+    )
+  }
+
   return (
     <div className="mx-auto max-w-lg">
       <div className="mb-6 flex items-center justify-between">
@@ -79,15 +75,7 @@ export function InviteLinks() {
         </Button>
       </div>
 
-      {loading && (
-        <div className="py-12 text-center text-muted-foreground">Loading...</div>
-      )}
-
-      {error && (
-        <div className="py-12 text-center text-destructive">{error}</div>
-      )}
-
-      {!loading && !error && links.length === 0 && (
+      {links.length === 0 && (
         <div className="py-12 text-center text-muted-foreground">
           No invite links yet. Generate one to share with volunteers.
         </div>

@@ -1,8 +1,3 @@
-export interface UserMeResponse {
-  userId: string
-  organization: { id: string; name: string } | null
-}
-
 export interface OrganizationDetail {
   id: string
   name: string

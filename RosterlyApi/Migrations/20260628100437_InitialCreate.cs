@@ -112,9 +112,9 @@ namespace RosterlyApi.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Events_OrganizationId",
+                name: "IX_Events_OrganizationId_Date",
                 table: "Events",
-                column: "OrganizationId");
+                columns: new[] { "OrganizationId", "Date" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_InviteLinks_Code",

@@ -1,40 +1,29 @@
 import { useAuth } from "@clerk/react"
-import { useEffect, useState } from "react"
+import { useQuery } from "@tanstack/react-query"
+
+async function fetchOrg(getToken: () => Promise<string | null>) {
+  const token = await getToken()
+  const res = await fetch("/api/user/me", {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  })
+  if (!res.ok) return null
+  const data = await res.json()
+  return data.organization ?? null
+}
 
 export function useOrg() {
   const { getToken, isSignedIn } = useAuth()
-  const [org, setOrg] = useState<{ id: string; name: string } | null | undefined>(
-    isSignedIn ? undefined : null
-  )
 
-  useEffect(() => {
-    if (!isSignedIn) return
+  const { data: org, isLoading } = useQuery({
+    queryKey: ["org"],
+    queryFn: () => fetchOrg(getToken),
+    enabled: isSignedIn,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  })
 
-    let cancelled = false
-
-    const load = async () => {
-      const token = await getToken()
-      const res = await globalThis.fetch("/api/user/me", {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      })
-      if (cancelled) return
-      if (!res.ok) {
-        setOrg(null)
-        return
-      }
-      const data = await res.json()
-      setOrg(data.organization ?? null)
-    }
-
-    load()
-    return () => {
-      cancelled = true
-      setOrg(null)
-    }
-  }, [getToken, isSignedIn])
-
-  return { org, loading: org === undefined }
+  return { org: isSignedIn ? (org ?? null) : null, loading: isSignedIn && isLoading }
 }

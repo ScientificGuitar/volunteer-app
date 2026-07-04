@@ -1,5 +1,4 @@
 import type {
-  UserMeResponse,
   OrganizationDetail,
   RosterEvent,
   CreateEventRequest,
@@ -43,11 +42,6 @@ export function createAdminApi(getToken: () => Promise<string | null>) {
   const h = () => authHeaders(getToken)
 
   return {
-    getMe: async () => {
-      const res = await fetch(`${BASE}/user/me`, { headers: await h() })
-      return checkJson<UserMeResponse>(res)
-    },
-
     getOrganization: async (id: string) => {
       const res = await fetch(`${BASE}/organizations/${id}`, { headers: await h() })
       return checkJson<OrganizationDetail>(res)
@@ -78,6 +72,11 @@ export function createAdminApi(getToken: () => Promise<string | null>) {
         body: JSON.stringify(data),
       })
       return checkJson<{ id: string }>(res)
+    },
+
+    getEvent: async (id: string) => {
+      const res = await fetch(`${BASE}/events/${id}`, { headers: await h() })
+      return checkJson<RosterEvent>(res)
     },
 
     deleteEvent: async (eventId: string) => {

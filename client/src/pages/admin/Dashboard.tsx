@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { toast } from "sonner"
+import { useQueryClient } from "@tanstack/react-query"
 import { useOrg } from "@/hooks/useOrg"
 import { useApi } from "@/hooks/useApi"
 import { WeeklyGrid } from "@/components/admin/WeeklyGrid"
@@ -8,6 +9,7 @@ import { Button } from "@/components/ui/button"
 export function Dashboard() {
   const { org, loading } = useOrg()
   const api = useApi()
+  const queryClient = useQueryClient()
   const [showCreateOrg, setShowCreateOrg] = useState(false)
   const [orgName, setOrgName] = useState("")
   const [creating, setCreating] = useState(false)
@@ -41,9 +43,9 @@ export function Dashboard() {
             setError(null)
             setCreating(true)
             try {
-              const result = await api.createOrganization(orgName)
-              toast.success(`Organization "${result.name}" created`)
-              window.location.reload()
+              await api.createOrganization(orgName)
+              toast.success("Organization created")
+              queryClient.invalidateQueries({ queryKey: ["org"] })
             } catch (e) {
               const msg = e instanceof Error ? e.message : "Something went wrong"
               setError(msg)
@@ -87,7 +89,7 @@ export function Dashboard() {
   return (
     <div>
       <h1 className="mb-6 text-2xl font-bold">{org.name}</h1>
-      <WeeklyGrid orgId={org.id} api={api} />
+      <WeeklyGrid orgId={org.id} />
     </div>
   )
 }

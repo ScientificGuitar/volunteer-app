@@ -26,6 +26,8 @@ public static class AdminEndpoints
 
         admin.MapDelete("/signups/{id}", DeleteSignup);
 
+        admin.MapGet("/events/{id}", GetEvent);
+
         admin.MapPost("/organizations/{orgId}/invite-links", CreateInviteLink);
 
         return app;
@@ -131,7 +133,7 @@ public static class AdminEndpoints
 
         var events = await db.Events
             .Where(e => e.OrganizationId == orgId && e.Date >= from && e.Date <= to)
-            .Include(e => e.TimeSlots)
+            .Include(e => e.TimeSlots).ThenInclude(s => s.Signups)
             .OrderBy(e => e.Date)
             .ToListAsync(ct);
 
@@ -277,6 +279,27 @@ public static class AdminEndpoints
         await db.SaveChangesAsync(ct);
 
         return Results.NoContent();
+    }
+
+    // --- Event Detail ---
+
+    private static async Task<IResult> GetEvent(Guid id, AppDbContext db, HttpContext http, CancellationToken ct)
+    {
+        var userId = GetUserId(http);
+        var evt = await db.Events
+            .Include(e => e.Organization)
+            .Include(e => e.TimeSlots).ThenInclude(s => s.Signups)
+            .FirstOrDefaultAsync(e => e.Id == id && e.Organization.ClerkUserId == userId, ct);
+
+        if (evt is null) return Results.NotFound();
+
+        return Results.Ok(new RosterEventResponse(
+            evt.Id, evt.Title, evt.Description, evt.Date,
+            evt.TimeSlots.Select(s => new RosterSlotResponse(
+                s.Id, s.Label, s.StartTime, s.EndTime, s.Capacity,
+                s.Signups.Select(su => new SignupResponse(su.Id, su.TimeSlotId, su.VolunteerName, su.CreatedAt))
+            ))
+        ));
     }
 
     // --- Invite Links ---

@@ -1,14 +1,12 @@
-import { useState, useEffect, useCallback } from "react"
-import { toast } from "sonner"
+import { useState } from "react"
 import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { EventCard } from "@/components/admin/EventCard"
-import type { RosterEvent } from "@/lib/types"
-import type { AdminApi } from "@/lib/api"
+import { useRoster } from "@/hooks/useRoster"
+import { useDeleteSignup } from "@/hooks/useDeleteSignup"
 
 interface WeeklyGridProps {
   orgId: string
-  api: AdminApi
 }
 
 function getMonday(date: Date): Date {
@@ -36,34 +34,17 @@ function formatWeekRange(monday: Date): string {
   return `${months[monday.getMonth()]} ${monday.getDate()} – ${months[sunday.getMonth()]} ${sunday.getDate()}, ${sunday.getFullYear()}`
 }
 
-export function WeeklyGrid({ orgId, api }: WeeklyGridProps) {
+export function WeeklyGrid({ orgId }: WeeklyGridProps) {
   const [monday, setMonday] = useState(() => getMonday(new Date()))
-  const [events, setEvents] = useState<RosterEvent[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const weekStart = formatDate(monday)
+  const { data: events, isLoading, error, refetch } = useRoster(orgId, weekStart)
+  const deleteSignup = useDeleteSignup()
 
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(monday)
     d.setDate(d.getDate() + i)
     return { date: formatDate(d), label: formatDayHeader(d) }
   })
-
-  const fetchRoster = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const data = await api.getRoster(orgId, formatDate(monday))
-      setEvents(data)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load roster")
-    } finally {
-      setLoading(false)
-    }
-  }, [orgId, monday, api])
-
-  useEffect(() => {
-    fetchRoster()
-  }, [fetchRoster])
 
   const prevWeek = () => {
     const d = new Date(monday)
@@ -78,16 +59,11 @@ export function WeeklyGrid({ orgId, api }: WeeklyGridProps) {
   }
 
   const handleDeleteSignup = async (signupId: string) => {
-    try {
-      await api.deleteSignup(signupId)
-      await fetchRoster()
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to delete signup")
-    }
+    await deleteSignup.mutateAsync(signupId)
   }
 
-  const eventsByDate = new Map<string, RosterEvent[]>()
-  for (const evt of events) {
+  const eventsByDate = new Map<string, typeof events>()
+  for (const evt of events ?? []) {
     const existing = eventsByDate.get(evt.date) ?? []
     existing.push(evt)
     eventsByDate.set(evt.date, existing)
@@ -107,18 +83,18 @@ export function WeeklyGrid({ orgId, api }: WeeklyGridProps) {
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
-        <Button variant="ghost" size="icon" onClick={fetchRoster}>
-          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+        <Button variant="ghost" size="icon" onClick={() => refetch()}>
+          <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
         </Button>
       </div>
 
-      {loading && events.length === 0 && (
+      {isLoading && !events && (
         <div className="py-12 text-center text-muted-foreground">Loading roster...</div>
       )}
       {error && (
-        <div className="py-12 text-center text-destructive">{error}</div>
+        <div className="py-12 text-center text-destructive">{(error as Error).message}</div>
       )}
-      {!loading && !error && events.length === 0 && (
+      {!isLoading && !error && events?.length === 0 && (
         <div className="py-12 text-center text-muted-foreground">
           No events this week.{" "}
           <a href="/events/new" className="text-primary hover:underline">

@@ -1,56 +1,28 @@
 import { useParams, useNavigate } from "react-router-dom"
 import { ArrowLeft, Trash2 } from "lucide-react"
-import { useEffect, useState, useCallback } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useOrg } from "@/hooks/useOrg"
+import { useEvent } from "@/hooks/useEvent"
+import { useDeleteSignup } from "@/hooks/useDeleteSignup"
 import { useApi } from "@/hooks/useApi"
-import type { RosterEvent } from "@/lib/types"
 
 export function EventDetail() {
   const { id } = useParams<{ id: string }>()
-  const { org } = useOrg()
+  const { org, loading: orgLoading } = useOrg()
+  const { data: event, isLoading, error } = useEvent(org && id ? id : undefined)
+  const deleteSignup = useDeleteSignup()
   const api = useApi()
   const navigate = useNavigate()
-  const [event, setEvent] = useState<RosterEvent | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const fetchEvent = useCallback(async () => {
-    if (!org || !id) return
-    setLoading(true)
-    setError(null)
-    try {
-      const data = await api.getRoster(org.id, "2010-01-01")
-      const found = data.find((e) => e.id === id)
-      if (!found) {
-        setError("Event not found")
-      } else {
-        setEvent(found)
-      }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Failed to load event"
-      setError(msg)
-      toast.error(msg)
-    } finally {
-      setLoading(false)
-    }
-  }, [org, id, api])
-
-  useEffect(() => {
-    fetchEvent()
-  }, [fetchEvent])
 
   const handleDeleteSignup = async (signupId: string) => {
     try {
-      await api.deleteSignup(signupId)
+      await deleteSignup.mutateAsync(signupId)
       toast.success("Signup removed")
-      await fetchEvent()
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Failed to delete signup"
-      toast.error(msg)
+      toast.error(e instanceof Error ? e.message : "Failed to delete signup")
     }
   }
 
@@ -61,19 +33,18 @@ export function EventDetail() {
       toast.success("Event deleted")
       navigate("/dashboard")
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Failed to delete event"
-      toast.error(msg)
+      toast.error(e instanceof Error ? e.message : "Failed to delete event")
     }
   }
 
-  if (loading) {
+  if (orgLoading || (isLoading && !event)) {
     return <div className="py-12 text-center text-muted-foreground">Loading...</div>
   }
 
   if (error || !event) {
     return (
       <div className="py-12 text-center">
-        <p className="mb-4 text-muted-foreground">{error ?? "Event not found"}</p>
+        <p className="mb-4 text-muted-foreground">{error instanceof Error ? error.message : "Event not found"}</p>
         <Button variant="outline" onClick={() => navigate("/dashboard")}>
           Back to Dashboard
         </Button>
