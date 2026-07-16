@@ -44,10 +44,7 @@ function Header() {
           <nav className="flex items-center gap-1">
             {navItems.map((item) => {
               const Icon = item.icon
-              const isActive =
-                location.pathname === item.to ||
-                (item.to === "/dashboard" &&
-                  location.pathname.startsWith("/events"))
+              const isActive = location.pathname === item.to
               return (
                 <Link
                   key={item.to}
@@ -93,11 +90,11 @@ function Header() {
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            onClick={() => openSignIn({ fallbackRedirectUrl: "/" })}
+            onClick={() => openSignIn({ fallbackRedirectUrl: window.location.pathname })}
           >
             Sign in
           </Button>
-          <Button onClick={() => openSignUp({ fallbackRedirectUrl: "/" })}>
+          <Button onClick={() => openSignUp({ fallbackRedirectUrl: window.location.pathname })}>
             Sign up
           </Button>
         </div>
@@ -135,6 +132,7 @@ export function App() {
             <Route path="/events/new" element={<CreateEvent />} />
             <Route path="/events/:id" element={<EventDetail />} />
             <Route path="/events/:id/edit" element={<EditEventWrapper />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </Show>
         <Show when="signed-out">
