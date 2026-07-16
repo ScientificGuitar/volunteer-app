@@ -1,6 +1,6 @@
 import { Toaster } from "sonner"
 import { Show, UserButton, useClerk } from "@clerk/react"
-import { Moon, Sun, LayoutDashboard, CalendarPlus, Link2 } from "lucide-react"
+import { Moon, Sun, LayoutDashboard, CalendarPlus } from "lucide-react"
 import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
@@ -8,13 +8,12 @@ import { useTheme } from "@/components/theme-provider"
 import { Dashboard } from "@/pages/admin/Dashboard"
 import { CreateEvent } from "@/pages/admin/CreateEvent"
 import { EventDetail } from "@/pages/admin/EventDetail"
-import { InviteLinks } from "@/pages/admin/InviteLinks"
+import { InvitePage } from "@/pages/public/InvitePage"
 import { cn } from "@/lib/utils"
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/events/new", label: "Create Event", icon: CalendarPlus },
-  { to: "/invite-links", label: "Invite Links", icon: Link2 },
 ]
 
 function Header() {
@@ -92,29 +91,39 @@ function Header() {
   )
 }
 
+function WelcomeScreen() {
+  return (
+    <div className="flex flex-1 items-center justify-center p-6">
+      <div className="max-w-md text-center">
+        <h1 className="mb-2 text-2xl font-bold">Welcome to Rosterly</h1>
+        <p className="text-muted-foreground">
+          Sign in to manage your organization&rsquo;s volunteer scheduling.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 export function App() {
   return (
     <div className="flex min-h-svh flex-col">
       <Toaster richColors position="top-right" />
       <Header />
       <main className="flex-1 p-6">
-        <Show when="signed-out">
-          <div className="flex flex-1 items-center justify-center p-6">
-            <div className="max-w-md text-center">
-              <h1 className="mb-2 text-2xl font-bold">Welcome to Rosterly</h1>
-              <p className="text-muted-foreground">
-                Sign in to manage your organization&rsquo;s volunteer scheduling.
-              </p>
-            </div>
-          </div>
-        </Show>
+        <Routes>
+          <Route path="/invite/:code" element={<InvitePage />} />
+        </Routes>
         <Show when="signed-in">
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/events/new" element={<CreateEvent />} />
             <Route path="/events/:id" element={<EventDetail />} />
-            <Route path="/invite-links" element={<InviteLinks />} />
+          </Routes>
+        </Show>
+        <Show when="signed-out">
+          <Routes>
+            <Route path="*" element={<WelcomeScreen />} />
           </Routes>
         </Show>
       </main>

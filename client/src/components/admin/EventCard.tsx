@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom"
 import { Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -13,7 +14,11 @@ export function EventCard({ event, onDeleteSignup }: EventCardProps) {
   return (
     <Card>
       <CardHeader className="p-3 pb-0">
-        <CardTitle className="text-sm font-semibold">{event.title}</CardTitle>
+        <CardTitle className="text-sm font-semibold">
+          <Link to={`/events/${event.id}`} className="hover:underline">
+            {event.title}
+          </Link>
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2 p-3 pt-2">
         {event.slots.length === 0 && (

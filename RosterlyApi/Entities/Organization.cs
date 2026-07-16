@@ -8,5 +8,4 @@ public class Organization
     public DateTime CreatedAt { get; set; }
 
     public ICollection<Event> Events { get; set; } = [];
-    public ICollection<InviteLink> InviteLinks { get; set; } = [];
 }

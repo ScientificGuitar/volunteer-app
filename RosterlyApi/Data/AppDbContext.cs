@@ -37,9 +37,9 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Label).HasMaxLength(200).IsRequired();
-            entity.HasOne(e => e.Event)
+            entity.HasOne(s => s.Event)
                 .WithMany(o => o.TimeSlots)
-                .HasForeignKey(e => e.EventId)
+                .HasForeignKey(s => s.EventId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -47,9 +47,9 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.VolunteerName).HasMaxLength(200).IsRequired();
-            entity.HasOne(e => e.TimeSlot)
+            entity.HasOne(s => s.TimeSlot)
                 .WithMany(o => o.Signups)
-                .HasForeignKey(e => e.TimeSlotId)
+                .HasForeignKey(s => s.TimeSlotId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -58,10 +58,11 @@ public class AppDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Code).HasMaxLength(50).IsRequired();
             entity.HasIndex(e => e.Code).IsUnique();
-            entity.HasOne(e => e.Organization)
-                .WithMany(o => o.InviteLinks)
-                .HasForeignKey(e => e.OrganizationId)
-                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(l => l.Event)
+                .WithMany()
+                .HasForeignKey(l => l.EventId)
+                .OnDelete(DeleteBehavior.SetNull);
+            entity.HasIndex(e => e.EventId);
         });
     }
 }

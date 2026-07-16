@@ -18,28 +18,33 @@ public static class PublicEndpoints
     private static async Task<IResult> GetInvitePage(string code, AppDbContext db, CancellationToken ct)
     {
         var link = await db.InviteLinks
-            .Include(l => l.Organization)
             .FirstOrDefaultAsync(l => l.Code == code && l.IsActive, ct);
 
-        if (link is null) return Results.NotFound(new { error = "Invite link not found or expired" });
+        if (link is null || link.EventId is null)
+            return Results.NotFound(new { error = "Invite link not found or expired" });
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-
-        var events = await db.Events
-            .Where(e => e.OrganizationId == link.OrganizationId && e.Date >= today)
+        var evt = await db.Events
+            .Include(e => e.Organization)
             .Include(e => e.TimeSlots).ThenInclude(s => s.Signups)
-            .OrderBy(e => e.Date)
-            .ToListAsync(ct);
+            .FirstOrDefaultAsync(e => e.Id == link.EventId, ct);
+
+        if (evt is null)
+            return Results.NotFound(new { error = "Invite link not found or expired" });
 
         return Results.Ok(new InvitePageResponse(
-            link.Organization.Id,
-            link.Organization.Name,
-            events.Select(e => new EventWithSlotsPublicResponse(
-                e.Id, e.Title, e.Description, e.Date,
-                e.TimeSlots.Select(s => new SlotAvailabilityResponse(
-                    s.Id, s.Label, s.StartTime, s.EndTime, s.Capacity, s.Signups.Count, s.Signups.Count >= s.Capacity
-                ))
-            ))
+            evt.OrganizationId,
+            evt.Organization.Name,
+            new EventPublicResponse(
+                evt.Id,
+                evt.Title,
+                evt.Description,
+                evt.Date,
+                evt.TimeSlots
+                    .OrderBy(s => s.StartTime)
+                    .Select(s => new SlotAvailabilityResponse(
+                        s.Id, s.Label, s.StartTime, s.EndTime, s.Capacity, s.Signups.Count, s.Signups.Count >= s.Capacity
+                    ))
+            )
         ));
     }
 
@@ -48,12 +53,11 @@ public static class PublicEndpoints
         var link = await db.InviteLinks
             .FirstOrDefaultAsync(l => l.Code == code && l.IsActive, ct);
 
-        if (link is null)
+        if (link is null || link.EventId is null)
             return Results.NotFound(new { error = "Invite link not found or expired" });
 
         var slot = await db.TimeSlots
-            .Include(s => s.Event)
-            .FirstOrDefaultAsync(s => s.Id == request.SlotId && s.Event.OrganizationId == link.OrganizationId, ct);
+            .FirstOrDefaultAsync(s => s.Id == request.SlotId && s.EventId == link.EventId, ct);
 
         if (slot is null)
             return Results.NotFound(new { error = "Time slot not found" });
@@ -94,9 +98,9 @@ public record PublicSignupRequest(Guid SlotId, string VolunteerName);
 
 // --- Response DTOs ---
 
-public record InvitePageResponse(Guid OrganizationId, string OrganizationName, IEnumerable<EventWithSlotsPublicResponse> Events);
+public record InvitePageResponse(Guid OrganizationId, string OrganizationName, EventPublicResponse Event);
 
-public record EventWithSlotsPublicResponse(Guid Id, string Title, string? Description, DateOnly Date, IEnumerable<SlotAvailabilityResponse> Slots);
+public record EventPublicResponse(Guid Id, string Title, string? Description, DateOnly Date, IEnumerable<SlotAvailabilityResponse> Slots);
 
 public record SlotAvailabilityResponse(Guid Id, string Label, TimeOnly StartTime, TimeOnly EndTime, int Capacity, int SignupCount, bool IsFull);
 

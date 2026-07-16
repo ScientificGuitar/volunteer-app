@@ -36,16 +36,15 @@ public class AdminEndpointTests : IClassFixture<IntegrationTestFactory>
     }
 
     [Fact]
-    public async Task GetOrganization_ReturnsOrgWithInviteLinks()
+    public async Task GetOrganization_ReturnsOrg()
     {
-        var orgId = await SeedOrgAsync("Org With Links");
+        var orgId = await SeedOrgAsync("Simple Org");
 
         var response = await _client.GetAsync($"/api/organizations/{orgId}");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
-        Assert.Equal("Org With Links", body.GetProperty("name").GetString());
-        Assert.True(body.TryGetProperty("inviteLinks", out _));
+        Assert.Equal("Simple Org", body.GetProperty("name").GetString());
     }
 
     [Fact]
@@ -256,8 +255,8 @@ public class AdminEndpointTests : IClassFixture<IntegrationTestFactory>
     {
         var (orgId, eventId, slotId) = await SeedSlotAsync("Admin Del Signup");
 
-        // Create an invite link, sign up via public endpoint
-        var linkResp = await _client.PostAsJsonAsync($"/api/organizations/{orgId}/invite-links", new { });
+        // Create an invite link for this event, sign up via public endpoint
+        var linkResp = await _client.PostAsJsonAsync($"/api/events/{eventId}/invite-links", new { });
         var link = await linkResp.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
         var code = link.GetProperty("code").GetString()!;
 
@@ -274,11 +273,11 @@ public class AdminEndpointTests : IClassFixture<IntegrationTestFactory>
     // --- Invite Links ---
 
     [Fact]
-    public async Task CreateInviteLink_ReturnsLinkWithCode()
+    public async Task CreateInviteLink_ReturnsLinkScopedToEvent()
     {
-        var orgId = await SeedOrgAsync("Link Org");
+        var (_, eventId, _) = await SeedSlotAsync("Link Org");
 
-        var response = await _client.PostAsJsonAsync($"/api/organizations/{orgId}/invite-links", new { });
+        var response = await _client.PostAsJsonAsync($"/api/events/{eventId}/invite-links", new { });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
@@ -286,6 +285,90 @@ public class AdminEndpointTests : IClassFixture<IntegrationTestFactory>
         Assert.NotNull(code);
         Assert.Equal(8, code!.Length);
         Assert.True(body.GetProperty("isActive").GetBoolean());
+        Assert.Equal(eventId, body.GetProperty("eventId").GetGuid());
+    }
+
+    [Fact]
+    public async Task CreateInviteLink_OtherUsersEvent_Returns404()
+    {
+        var otherEventId = Guid.NewGuid();
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var org = new Organization
+            {
+                Id = Guid.NewGuid(),
+                Name = "Other",
+                ClerkUserId = TestAuthHandler.OtherUserId,
+                CreatedAt = DateTime.UtcNow
+            };
+            db.Organizations.Add(org);
+            db.Events.Add(new Event
+            {
+                Id = otherEventId,
+                OrganizationId = org.Id,
+                Title = "Other Event",
+                Date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7)),
+                CreatedAt = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var response = await _client.PostAsJsonAsync($"/api/events/{otherEventId}/invite-links", new { });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ListInviteLinks_ReturnsEventLinks()
+    {
+        var (_, eventId, _) = await SeedSlotAsync("List Link Org");
+
+        await _client.PostAsJsonAsync($"/api/events/{eventId}/invite-links", new { });
+        await _client.PostAsJsonAsync($"/api/events/{eventId}/invite-links", new { });
+
+        var response = await _client.GetAsync($"/api/events/{eventId}/invite-links");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        var links = body.EnumerateArray().ToList();
+        Assert.Equal(2, links.Count);
+        Assert.All(links, l => Assert.Equal(eventId, l.GetProperty("eventId").GetGuid()));
+    }
+
+    [Fact]
+    public async Task RevokeInviteLink_DeactivatesLink()
+    {
+        var (_, eventId, _) = await SeedSlotAsync("Revoke Link Org");
+
+        var createResp = await _client.PostAsJsonAsync($"/api/events/{eventId}/invite-links", new { });
+        var created = await createResp.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        var linkId = created.GetProperty("id").GetGuid();
+
+        var revokeResp = await _client.PutAsync($"/api/invite-links/{linkId}/revoke", null);
+        Assert.Equal(HttpStatusCode.NoContent, revokeResp.StatusCode);
+
+        var list = await _client.GetFromJsonAsync<JsonElement>($"/api/events/{eventId}/invite-links", _jsonOptions);
+        var link = list.EnumerateArray().First(l => l.GetProperty("id").GetGuid() == linkId);
+        Assert.False(link.GetProperty("isActive").GetBoolean());
+    }
+
+    [Fact]
+    public async Task RevokeInviteLink_OtherUsersLink_Returns404()
+    {
+        var (_, eventId, _) = await SeedSlotAsync("Revoke Other Link Org");
+
+        // Create the link as the test user
+        var createResp = await _client.PostAsJsonAsync($"/api/events/{eventId}/invite-links", new { });
+        var created = await createResp.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        var linkId = created.GetProperty("id").GetGuid();
+
+        // Now switch to a different user and try to revoke
+        var otherClient = _factory.CreateClient();
+        otherClient.DefaultRequestHeaders.Add(TestAuthHandler.UserIdHeader, TestAuthHandler.OtherUserId);
+
+        var revokeResp = await otherClient.PutAsync($"/api/invite-links/{linkId}/revoke", null);
+        Assert.Equal(HttpStatusCode.NotFound, revokeResp.StatusCode);
     }
 
     // --- Helpers ---

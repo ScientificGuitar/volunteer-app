@@ -50,7 +50,7 @@ namespace RosterlyApi.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrganizationId");
+                    b.HasIndex("OrganizationId", "Date");
 
                     b.ToTable("Events");
                 });

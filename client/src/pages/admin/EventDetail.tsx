@@ -1,13 +1,17 @@
+import { useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import { ArrowLeft, Trash2 } from "lucide-react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { ArrowLeft, Trash2, Link2, Copy, Plus, Power } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useOrg } from "@/hooks/useOrg"
 import { useEvent } from "@/hooks/useEvent"
 import { useDeleteSignup } from "@/hooks/useDeleteSignup"
 import { useApi } from "@/hooks/useApi"
+import type { InviteLink } from "@/lib/types"
 
 export function EventDetail() {
   const { id } = useParams<{ id: string }>()
@@ -53,8 +57,8 @@ export function EventDetail() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <div className="mb-6 flex items-center gap-4">
+    <div className="mx-auto max-w-2xl space-y-6">
+      <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
@@ -67,6 +71,8 @@ export function EventDetail() {
         </Button>
       </div>
 
+      <InviteLinkSection eventId={event.id} />
+
       <div className="space-y-4">
         {event.slots.length === 0 && (
           <p className="text-center text-muted-foreground">No time slots for this event.</p>
@@ -78,7 +84,7 @@ export function EventDetail() {
                 <span>
                   {slot.label}
                   <span className="ml-2 font-normal text-muted-foreground">
-                    {slot.startTime}–{slot.endTime}
+                    {slot.startTime}&ndash;{slot.endTime}
                   </span>
                 </span>
                 <Badge
@@ -129,4 +135,127 @@ export function EventDetail() {
       </div>
     </div>
   )
+}
+
+interface InviteLinkSectionProps {
+  eventId: string
+}
+
+function InviteLinkSection({ eventId }: InviteLinkSectionProps) {
+  const api = useApi()
+  const queryClient = useQueryClient()
+  const [generating, setGenerating] = useState(false)
+
+  const { data: links, isLoading } = useQuery({
+    queryKey: ["inviteLinks", eventId],
+    queryFn: () => api.listInviteLinks(eventId),
+  })
+
+  const handleGenerate = async () => {
+    setGenerating(true)
+    try {
+      const link = await api.createInviteLink(eventId)
+      const url = `${window.location.origin}/invite/${link.code}`
+      await copyToClipboard(url)
+      toast.success("Invite link copied to clipboard")
+      queryClient.invalidateQueries({ queryKey: ["inviteLinks", eventId] })
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to generate link")
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  const handleCopy = async (code: string) => {
+    const url = `${window.location.origin}/invite/${code}`
+    await copyToClipboard(url)
+    toast.success("Link copied")
+  }
+
+  const handleRevoke = async (link: InviteLink) => {
+    if (!confirm("Revoke this invite link? Volunteers using it will see an invalid link.")) return
+    try {
+      await api.revokeInviteLink(link.id)
+      toast.success("Invite link revoked")
+      queryClient.invalidateQueries({ queryKey: ["inviteLinks", eventId] })
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to revoke link")
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader className="p-4 pb-2">
+        <CardTitle className="flex items-center justify-between text-base">
+          <span className="flex items-center gap-2">
+            <Link2 className="h-4 w-4" />
+            Invite links
+          </span>
+          <Button size="sm" onClick={handleGenerate} disabled={generating}>
+            <Plus className="mr-1 h-3 w-3" />
+            {generating ? "Generating..." : "Generate link"}
+          </Button>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 p-4 pt-2">
+        {isLoading && (
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        )}
+        {links && links.length === 0 && (
+          <p className="rounded-md border border-dashed py-4 text-center text-sm text-muted-foreground">
+            No invite links yet. Generate one to share with volunteers.
+          </p>
+        )}
+        {links?.map((link) => (
+          <div
+            key={link.id}
+            className="flex items-center gap-2 rounded-md border p-2"
+          >
+            <Input
+              readOnly
+              value={`${window.location.origin}/invite/${link.code}`}
+              className="h-8 font-mono text-xs"
+              onClick={(e) => e.currentTarget.select()}
+            />
+            <Badge variant={link.isActive ? "default" : "secondary"}>
+              {link.isActive ? "Active" : "Revoked"}
+            </Badge>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              onClick={() => handleCopy(link.code)}
+              title="Copy"
+              disabled={!link.isActive}
+            >
+              <Copy className="h-3 w-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              onClick={() => handleRevoke(link)}
+              title="Revoke"
+              disabled={!link.isActive}
+            >
+              <Power className="h-3 w-3" />
+            </Button>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  )
+}
+
+async function copyToClipboard(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text)
+  } catch {
+    const input = document.createElement("input")
+    input.value = text
+    document.body.appendChild(input)
+    input.select()
+    document.execCommand("copy")
+    document.body.removeChild(input)
+  }
 }

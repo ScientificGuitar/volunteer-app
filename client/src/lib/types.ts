@@ -1,17 +1,3 @@
-export interface OrganizationDetail {
-  id: string
-  name: string
-  createdAt: string
-  inviteLinks: InviteLinkInfo[]
-}
-
-export interface InviteLinkInfo {
-  id: string
-  code: string
-  isActive: boolean
-  createdAt: string
-}
-
 export interface RosterEvent {
   id: string
   title: string
@@ -36,8 +22,9 @@ export interface SignupInfo {
   createdAt: string
 }
 
-export interface InviteLinkResponse {
+export interface InviteLink {
   id: string
+  eventId: string | null
   code: string
   isActive: boolean
   createdAt: string
@@ -45,6 +32,7 @@ export interface InviteLinkResponse {
 
 export interface CreateInviteLinkResponse {
   id: string
+  eventId: string | null
   code: string
   isActive: boolean
   createdAt: string
@@ -62,4 +50,28 @@ export interface CreateSlotRequest {
   startTime: string
   endTime: string
   capacity: number
+}
+
+export interface PublicInviteData {
+  organizationId: string
+  organizationName: string
+  event: PublicEvent | null
+}
+
+export interface PublicEvent {
+  id: string
+  title: string
+  description: string | null
+  date: string
+  slots: PublicSlot[]
+}
+
+export interface PublicSlot {
+  id: string
+  label: string
+  startTime: string
+  endTime: string
+  capacity: number
+  signupCount: number
+  isFull: boolean
 }

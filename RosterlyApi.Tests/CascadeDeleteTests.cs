@@ -38,7 +38,7 @@ public class CascadeDeleteTests : IClassFixture<IntegrationTestFactory>
         var eventId = evt.GetProperty("id").GetGuid();
 
         // Create invite link and signup
-        var linkResp = await _client.PostAsJsonAsync($"/api/organizations/{orgId}/invite-links", new { });
+        var linkResp = await _client.PostAsJsonAsync($"/api/events/{eventId}/invite-links", new { });
         var link = await linkResp.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
         var code = link.GetProperty("code").GetString()!;
 
@@ -63,6 +63,45 @@ public class CascadeDeleteTests : IClassFixture<IntegrationTestFactory>
     }
 
     [Fact]
+    public async Task DeleteEvent_LeavesInviteLinkOrphaned()
+    {
+        // Invite links use SetNull on Event delete (so the code is preserved, but the public
+        // endpoint will 404 because EventId is null and Event is not loadable).
+        var orgId = await SeedOrgAsync("Orphan Link Org");
+
+        var createEvt = await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events", new
+        {
+            title = "Doomed Event",
+            date = "2026-07-12"
+        });
+        var evt = await createEvt.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        var eventId = evt.GetProperty("id").GetGuid();
+
+        var linkResp = await _client.PostAsJsonAsync($"/api/events/{eventId}/invite-links", new { });
+        var link = await linkResp.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        var code = link.GetProperty("code").GetString()!;
+        var linkId = link.GetProperty("id").GetGuid();
+
+        // Delete the event
+        var deleteResp = await _client.DeleteAsync($"/api/events/{eventId}");
+        Assert.Equal(HttpStatusCode.NoContent, deleteResp.StatusCode);
+
+        // Invite link row still exists but EventId is null
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var orphaned = await db.InviteLinks.FindAsync(linkId);
+            Assert.NotNull(orphaned);
+            Assert.Null(orphaned!.EventId);
+        }
+
+        // Public endpoint returns 404 for the orphaned code
+        var publicClient = _factory.CreateClient();
+        var getResp = await publicClient.GetAsync($"/api/invite/{code}");
+        Assert.Equal(HttpStatusCode.NotFound, getResp.StatusCode);
+    }
+
+    [Fact]
     public async Task DeleteOrganization_CascadesToEventsAndSlots()
     {
         var orgId = await SeedOrgAsync("Cascade Org 2");
@@ -74,16 +113,12 @@ public class CascadeDeleteTests : IClassFixture<IntegrationTestFactory>
             slots = new[] { new { label = "Doomed Slot", startTime = "08:00", endTime = "09:00", capacity = 2 } }
         });
 
-        // Create invite link
-        await _client.PostAsJsonAsync($"/api/organizations/{orgId}/invite-links", new { });
-
         // Use raw DB to delete the organization (API doesn't expose org deletion yet)
         using (var scope = _factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var org = await db.Organizations
                 .Include(o => o.Events).ThenInclude(e => e.TimeSlots)
-                .Include(o => o.InviteLinks)
                 .FirstAsync(o => o.Id == orgId);
             db.Organizations.Remove(org);
             await db.SaveChangesAsync();
@@ -95,7 +130,6 @@ public class CascadeDeleteTests : IClassFixture<IntegrationTestFactory>
         Assert.False(await checkDb.Organizations.AnyAsync(o => o.Id == orgId));
         Assert.False(await checkDb.Events.AnyAsync(e => e.OrganizationId == orgId));
         Assert.False(await checkDb.TimeSlots.AnyAsync(s => s.Event != null && s.Event.OrganizationId == orgId));
-        Assert.False(await checkDb.InviteLinks.AnyAsync(l => l.OrganizationId == orgId));
     }
 
     // --- Helpers ---

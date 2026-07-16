@@ -1,8 +1,9 @@
 import type {
-  OrganizationDetail,
   RosterEvent,
   CreateEventRequest,
   CreateInviteLinkResponse,
+  InviteLink,
+  PublicInviteData,
 } from "@/lib/types"
 
 const BASE = "/api"
@@ -42,11 +43,6 @@ export function createAdminApi(getToken: () => Promise<string | null>) {
   const h = () => authHeaders(getToken)
 
   return {
-    getOrganization: async (id: string) => {
-      const res = await fetch(`${BASE}/organizations/${id}`, { headers: await h() })
-      return checkJson<OrganizationDetail>(res)
-    },
-
     createOrganization: async (name: string) => {
       const res = await fetch(`${BASE}/organizations`, {
         method: "POST",
@@ -102,15 +98,50 @@ export function createAdminApi(getToken: () => Promise<string | null>) {
       await checkVoid(res)
     },
 
-    createInviteLink: async (orgId: string) => {
-      const res = await fetch(`${BASE}/organizations/${orgId}/invite-links`, {
+    createInviteLink: async (eventId: string) => {
+      const res = await fetch(`${BASE}/events/${eventId}/invite-links`, {
         method: "POST",
         headers: await h(),
         body: JSON.stringify({}),
       })
       return checkJson<CreateInviteLinkResponse>(res)
     },
+
+    listInviteLinks: async (eventId: string) => {
+      const res = await fetch(`${BASE}/events/${eventId}/invite-links`, {
+        headers: await h(),
+      })
+      return checkJson<InviteLink[]>(res)
+    },
+
+    revokeInviteLink: async (id: string) => {
+      const res = await fetch(`${BASE}/invite-links/${id}/revoke`, {
+        method: "PUT",
+        headers: await h(),
+      })
+      await checkVoid(res)
+    },
   }
 }
 
 export type AdminApi = ReturnType<typeof createAdminApi>
+
+export function createPublicApi() {
+  return {
+    getInvitePage: async (code: string) => {
+      const res = await fetch(`${BASE}/invite/${code}`)
+      return checkJson<PublicInviteData>(res)
+    },
+
+    createSignup: async (code: string, data: { slotId: string; volunteerName: string }) => {
+      const res = await fetch(`${BASE}/invite/${code}/signups`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      })
+      return checkJson<{ id: string; slotId: string; volunteerName: string; createdAt: string }>(res)
+    },
+  }
+}
+
+export type PublicApi = ReturnType<typeof createPublicApi>

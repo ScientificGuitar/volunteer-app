@@ -28,7 +28,9 @@ public static class AdminEndpoints
 
         admin.MapGet("/events/{id}", GetEvent);
 
-        admin.MapPost("/organizations/{orgId}/invite-links", CreateInviteLink);
+        admin.MapPost("/events/{eventId}/invite-links", CreateInviteLink);
+        admin.MapGet("/events/{eventId}/invite-links", ListInviteLinks);
+        admin.MapPut("/invite-links/{id}/revoke", RevokeInviteLink);
 
         return app;
     }
@@ -67,17 +69,11 @@ public static class AdminEndpoints
         var userId = GetUserId(http);
 
         var org = await db.Organizations
-            .Include(o => o.InviteLinks)
             .FirstOrDefaultAsync(o => o.Id == id && o.ClerkUserId == userId, ct);
 
         if (org is null) return Results.NotFound();
 
-        return Results.Ok(new OrganizationDetailResponse(
-            org.Id,
-            org.Name,
-            org.CreatedAt,
-            org.InviteLinks.Select(il => new InviteLinkResponse(il.Id, il.Code, il.IsActive, il.CreatedAt))
-        ));
+        return Results.Ok(new OrganizationResponse(org.Id, org.Name, org.CreatedAt));
     }
 
     // --- Events ---
@@ -304,16 +300,19 @@ public static class AdminEndpoints
 
     // --- Invite Links ---
 
-    private static async Task<IResult> CreateInviteLink(Guid orgId, AppDbContext db, HttpContext http, CancellationToken ct)
+    private static async Task<IResult> CreateInviteLink(Guid eventId, AppDbContext db, HttpContext http, CancellationToken ct)
     {
         var userId = GetUserId(http);
-        var org = await GetOwnedOrganization(db, orgId, userId, ct);
-        if (org is null) return Results.NotFound();
+        var evt = await db.Events
+            .Include(e => e.Organization)
+            .FirstOrDefaultAsync(e => e.Id == eventId && e.Organization.ClerkUserId == userId, ct);
+
+        if (evt is null) return Results.NotFound();
 
         var link = new InviteLink
         {
             Id = Guid.NewGuid(),
-            OrganizationId = orgId,
+            EventId = eventId,
             Code = GenerateInviteCode(),
             IsActive = true,
             CreatedAt = DateTime.UtcNow
@@ -322,7 +321,42 @@ public static class AdminEndpoints
         db.InviteLinks.Add(link);
         await db.SaveChangesAsync(ct);
 
-        return Results.Ok(new InviteLinkResponse(link.Id, link.Code, link.IsActive, link.CreatedAt));
+        return Results.Ok(new InviteLinkResponse(link.Id, link.EventId, link.Code, link.IsActive, link.CreatedAt));
+    }
+
+    private static async Task<IResult> ListInviteLinks(Guid eventId, AppDbContext db, HttpContext http, CancellationToken ct)
+    {
+        var userId = GetUserId(http);
+        var evt = await db.Events
+            .Include(e => e.Organization)
+            .FirstOrDefaultAsync(e => e.Id == eventId && e.Organization.ClerkUserId == userId, ct);
+
+        if (evt is null) return Results.NotFound();
+
+        var links = await db.InviteLinks
+            .Where(l => l.EventId == eventId)
+            .OrderByDescending(l => l.CreatedAt)
+            .ToListAsync(ct);
+
+        return Results.Ok(links.Select(l => new InviteLinkResponse(l.Id, l.EventId, l.Code, l.IsActive, l.CreatedAt)));
+    }
+
+    private static async Task<IResult> RevokeInviteLink(Guid id, AppDbContext db, HttpContext http, CancellationToken ct)
+    {
+        var userId = GetUserId(http);
+        var link = await db.InviteLinks
+            .Include(l => l.Event!).ThenInclude(e => e.Organization)
+            .FirstOrDefaultAsync(l => l.Id == id && l.EventId != null, ct);
+
+        if (link is null || link.Event is null || link.Event.Organization.ClerkUserId != userId)
+            return Results.NotFound();
+
+        if (!link.IsActive) return Results.NoContent();
+
+        link.IsActive = false;
+        await db.SaveChangesAsync(ct);
+
+        return Results.NoContent();
     }
 
     private static string GenerateInviteCode()
@@ -349,9 +383,7 @@ public record UpdateSlotRequest(string? Label, TimeOnly? StartTime, TimeOnly? En
 
 public record OrganizationResponse(Guid Id, string Name, DateTime CreatedAt);
 
-public record OrganizationDetailResponse(Guid Id, string Name, DateTime CreatedAt, IEnumerable<InviteLinkResponse> InviteLinks);
-
-public record InviteLinkResponse(Guid Id, string Code, bool IsActive, DateTime CreatedAt);
+public record InviteLinkResponse(Guid Id, Guid? EventId, string Code, bool IsActive, DateTime CreatedAt);
 
 public record EventResponse(Guid Id, Guid OrganizationId, string Title, string? Description, DateOnly Date, DateTime CreatedAt);
 
