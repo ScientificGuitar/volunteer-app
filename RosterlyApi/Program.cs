@@ -17,6 +17,26 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 var clerkIssuer = builder.Configuration["Clerk:Issuer"]
     ?? throw new InvalidOperationException("Clerk:Issuer is not configured");
 
+var clerkAuthorizedPartiesRaw = builder.Configuration["Clerk:AuthorizedParties"]
+    ?? throw new InvalidOperationException("Clerk:AuthorizedParties is not configured");
+
+var clerkAuthorizedParties = clerkAuthorizedPartiesRaw
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    .Select(p => p.TrimEnd('/'))
+    .ToArray();
+
+if (clerkAuthorizedParties.Length == 0)
+    throw new InvalidOperationException("Clerk:AuthorizedParties must contain at least one party");
+
+foreach (var party in clerkAuthorizedParties)
+{
+    if (!Uri.TryCreate(party, UriKind.Absolute, out var uri) ||
+        (uri.Scheme != "http" && uri.Scheme != "https"))
+    {
+        throw new InvalidOperationException($"Invalid authorized party URI: '{party}'");
+    }
+}
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -28,6 +48,18 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidIssuer = clerkIssuer,
             ValidateAudience = false,
             ValidateLifetime = true
+        };
+        options.Events = new()
+        {
+            OnTokenValidated = ctx =>
+            {
+                var azp = ctx.Principal?.FindFirst("azp")?.Value?.TrimEnd('/');
+                if (azp is null || !clerkAuthorizedParties.Contains(azp, StringComparer.OrdinalIgnoreCase))
+                {
+                    ctx.Fail("Unauthorized authorized party.");
+                }
+                return Task.CompletedTask;
+            }
         };
     });
 

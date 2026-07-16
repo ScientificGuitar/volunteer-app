@@ -23,7 +23,8 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
         {
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Clerk:Issuer"] = "https://test.clerk.accounts.dev"
+                ["Clerk:Issuer"] = "https://test.clerk.accounts.dev",
+                ["Clerk:AuthorizedParties"] = "http://localhost:5173,http://localhost:80,http://localhost"
             });
         });
 

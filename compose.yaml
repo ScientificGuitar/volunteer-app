@@ -28,6 +28,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__DefaultConnection: "Host=db;Database=rosterly;Username=rosterly;Password=rosterly"
       Clerk__Issuer: "${CLERK_ISSUER}"
+      Clerk__AuthorizedParties: "${CLERK_AUTHORIZED_PARTIES}"
     depends_on:
       db:
         condition: service_healthy
