@@ -38,7 +38,7 @@
 - **Tailwind v4**: Uses `@tailwindcss/vite` plugin — no `tailwind.config.js`
 - **Vite proxy only** in dev (`/api` -> `localhost:5000`); dev server runs on 5173
 - **Docker vs local DB**: `appsettings.Development.json` has `localhost:5432`; `compose.yaml` overrides to `Host=db` — do not commit docker-specific connection strings to `appsettings.Development.json`
-- **EF Core Design** package is included for migrations; migrations are NOT auto-applied
+- **EF Core Design** package is included for migrations; migrations are auto-applied at API startup via `db.Database.MigrateAsync()`
 - **Prettier**: `semi: false`, `singleQuote: false`, `endOfLine: lf`, `tailwindStylesheet: src/index.css`
 - **ESLint**: ignores `dist` directory
 - shadcn components live in `src/components/ui/`
