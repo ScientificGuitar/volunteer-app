@@ -1,7 +1,14 @@
 import { Toaster } from "sonner"
 import { Show, UserButton, useClerk } from "@clerk/react"
 import { Moon, Sun, LayoutDashboard, CalendarPlus } from "lucide-react"
-import { Routes, Route, Navigate, Link, useLocation, useParams } from "react-router-dom"
+import {
+  Routes,
+  Route,
+  Navigate,
+  Link,
+  useLocation,
+  useParams,
+} from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import { useTheme } from "@/components/theme-provider"
@@ -37,8 +44,10 @@ function Header() {
           <nav className="flex items-center gap-1">
             {navItems.map((item) => {
               const Icon = item.icon
-              const isActive = location.pathname === item.to ||
-                (item.to === "/dashboard" && location.pathname.startsWith("/events"))
+              const isActive =
+                location.pathname === item.to ||
+                (item.to === "/dashboard" &&
+                  location.pathname.startsWith("/events"))
               return (
                 <Link
                   key={item.to}
@@ -46,8 +55,8 @@ function Header() {
                   className={cn(
                     "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors",
                     isActive
-                      ? "bg-primary/10 text-primary font-medium"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      ? "bg-primary/10 font-medium text-primary"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
                 >
                   <Icon className="h-4 w-4" />

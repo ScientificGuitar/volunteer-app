@@ -24,7 +24,9 @@ export function EditEvent() {
   const navigate = useNavigate()
 
   if (isPending && !event) {
-    return <div className="py-12 text-center text-muted-foreground">Loading...</div>
+    return (
+      <div className="py-12 text-center text-muted-foreground">Loading...</div>
+    )
   }
 
   if (error || !event) {
@@ -68,7 +70,8 @@ function EventForm({ event, eventId }: EventFormProps) {
   const [showAddSlot, setShowAddSlot] = useState(false)
   const [slotSubmitting, setSlotSubmitting] = useState(false)
 
-  const invalidateEvent = () => queryClient.invalidateQueries({ queryKey: ["event", eventId] })
+  const invalidateEvent = () =>
+    queryClient.invalidateQueries({ queryKey: ["event", eventId] })
 
   const validateSlotTimes = () => {
     if (slotForm.endTime <= slotForm.startTime) {
@@ -107,7 +110,12 @@ function EventForm({ event, eventId }: EventFormProps) {
       await api.createSlot(eventId, slotForm)
       await invalidateEvent()
       toast.success("Slot added")
-      setSlotForm({ label: "", startTime: "08:00", endTime: "09:00", capacity: 1 })
+      setSlotForm({
+        label: "",
+        startTime: "08:00",
+        endTime: "09:00",
+        capacity: 1,
+      })
       setShowAddSlot(false)
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to add slot"
@@ -135,9 +143,10 @@ function EventForm({ event, eventId }: EventFormProps) {
   }
 
   const handleDeleteSlot = async (slot: RosterSlot) => {
-    const confirmMsg = slot.signups.length > 0
-      ? `Delete "${slot.label}"? This will also remove ${slot.signups.length} signup(s).`
-      : `Delete "${slot.label}"?`
+    const confirmMsg =
+      slot.signups.length > 0
+        ? `Delete "${slot.label}"? This will also remove ${slot.signups.length} signup(s).`
+        : `Delete "${slot.label}"?`
     if (!confirm(confirmMsg)) return
 
     setSlotSubmitting(true)
@@ -165,7 +174,12 @@ function EventForm({ event, eventId }: EventFormProps) {
   }
 
   const startAddSlot = () => {
-    setSlotForm({ label: "", startTime: "08:00", endTime: "09:00", capacity: 1 })
+    setSlotForm({
+      label: "",
+      startTime: "08:00",
+      endTime: "09:00",
+      capacity: 1,
+    })
     setShowAddSlot(true)
     setEditingSlotId(null)
   }
@@ -216,7 +230,11 @@ function EventForm({ event, eventId }: EventFormProps) {
             <Button type="submit" disabled={submitting}>
               {submitting ? "Saving..." : "Save Changes"}
             </Button>
-            <Button type="button" variant="outline" onClick={() => navigate(`/events/${eventId}`)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate(`/events/${eventId}`)}
+            >
               Cancel
             </Button>
           </div>
@@ -260,12 +278,17 @@ function EventForm({ event, eventId }: EventFormProps) {
                   <div>
                     <span className="font-medium">{slot.label}</span>
                     <span className="ml-2 text-sm text-muted-foreground">
-                      {slot.startTime.slice(0, 5)}&ndash;{slot.endTime.slice(0, 5)}
+                      {slot.startTime.slice(0, 5)}&ndash;
+                      {slot.endTime.slice(0, 5)}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge
-                      variant={slot.signups.length >= slot.capacity ? "destructive" : "secondary"}
+                      variant={
+                        slot.signups.length >= slot.capacity
+                          ? "destructive"
+                          : "secondary"
+                      }
                     >
                       {slot.signups.length}/{slot.capacity}
                     </Badge>
@@ -320,13 +343,23 @@ interface SlotEditFormProps {
   isNew?: boolean
 }
 
-function SlotEditForm({ form, setForm, submitting, onSave, onCancel, isNew }: SlotEditFormProps) {
+function SlotEditForm({
+  form,
+  setForm,
+  submitting,
+  onSave,
+  onCancel,
+  isNew,
+}: SlotEditFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSave()
   }
 
-  const updateField = <K extends keyof SlotFormData>(field: K, value: SlotFormData[K]) => {
+  const updateField = <K extends keyof SlotFormData>(
+    field: K,
+    value: SlotFormData[K]
+  ) => {
     setForm({ ...form, [field]: value })
   }
 
@@ -368,7 +401,9 @@ function SlotEditForm({ form, setForm, submitting, onSave, onCancel, isNew }: Sl
           type="number"
           min={1}
           value={form.capacity}
-          onChange={(e) => updateField("capacity", parseInt(e.target.value) || 1)}
+          onChange={(e) =>
+            updateField("capacity", parseInt(e.target.value) || 1)
+          }
           required
           className="h-8 text-sm"
         />
@@ -376,7 +411,13 @@ function SlotEditForm({ form, setForm, submitting, onSave, onCancel, isNew }: Sl
       <Button type="submit" size="sm" disabled={submitting}>
         {submitting ? "..." : isNew ? "Add" : "Save"}
       </Button>
-      <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={onCancel}>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8"
+        onClick={onCancel}
+      >
         <X className="h-4 w-4" />
       </Button>
     </form>

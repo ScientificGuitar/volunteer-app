@@ -7,7 +7,7 @@ import { WeeklyGrid } from "@/components/admin/WeeklyGrid"
 import { Button } from "@/components/ui/button"
 
 export function Dashboard() {
-  const { org, loading } = useOrg()
+  const { org, loading, error: orgError } = useOrg()
   const api = useApi()
   const queryClient = useQueryClient()
   const [showCreateOrg, setShowCreateOrg] = useState(false)
@@ -16,7 +16,21 @@ export function Dashboard() {
   const [error, setError] = useState<string | null>(null)
 
   if (loading) {
-    return <div className="py-12 text-center text-muted-foreground">Loading...</div>
+    return (
+      <div className="py-12 text-center text-muted-foreground">Loading...</div>
+    )
+  }
+
+  if (orgError) {
+    return (
+      <div className="py-12 text-center">
+        <p className="mb-4 text-muted-foreground">
+          {orgError instanceof Error
+            ? orgError.message
+            : "Failed to load organization"}
+        </p>
+      </div>
+    )
   }
 
   if (!org) {
@@ -47,7 +61,8 @@ export function Dashboard() {
               toast.success("Organization created")
               queryClient.invalidateQueries({ queryKey: ["org"] })
             } catch (e) {
-              const msg = e instanceof Error ? e.message : "Something went wrong"
+              const msg =
+                e instanceof Error ? e.message : "Something went wrong"
               setError(msg)
               toast.error(msg)
             } finally {
@@ -70,14 +85,19 @@ export function Dashboard() {
               placeholder="My Church"
             />
           </div>
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
-          )}
+          {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex gap-2">
             <Button type="submit" disabled={creating}>
               {creating ? "Creating..." : "Create"}
             </Button>
-            <Button type="button" variant="outline" onClick={() => { setShowCreateOrg(false); setError(null) }}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowCreateOrg(false)
+                setError(null)
+              }}
+            >
               Cancel
             </Button>
           </div>

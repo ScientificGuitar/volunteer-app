@@ -19,7 +19,7 @@ interface SlotRow {
 let nextKey = 1
 
 export function CreateEvent() {
-  const { org } = useOrg()
+  const { org, error: orgError } = useOrg()
   const api = useApi()
   const navigate = useNavigate()
   const [title, setTitle] = useState("")
@@ -28,12 +28,33 @@ export function CreateEvent() {
   const [slots, setSlots] = useState<SlotRow[]>([])
   const [submitting, setSubmitting] = useState(false)
 
+  if (orgError) {
+    return (
+      <div className="py-12 text-center">
+        <p className="mb-4 text-muted-foreground">
+          {orgError instanceof Error
+            ? orgError.message
+            : "Failed to load organization"}
+        </p>
+        <Button variant="outline" onClick={() => navigate("/dashboard")}>
+          Back to Dashboard
+        </Button>
+      </div>
+    )
+  }
+
   if (!org) return null
 
   const addSlot = () => {
     setSlots((prev) => [
       ...prev,
-      { key: nextKey++, label: "", startTime: "08:00", endTime: "09:00", capacity: 1 },
+      {
+        key: nextKey++,
+        label: "",
+        startTime: "08:00",
+        endTime: "09:00",
+        capacity: 1,
+      },
     ])
   }
 
@@ -41,7 +62,11 @@ export function CreateEvent() {
     setSlots((prev) => prev.filter((s) => s.key !== key))
   }
 
-  const updateSlot = (key: number, field: keyof SlotRow, value: string | number) => {
+  const updateSlot = (
+    key: number,
+    field: keyof SlotRow,
+    value: string | number
+  ) => {
     setSlots((prev) =>
       prev.map((s) => (s.key === key ? { ...s, [field]: value } : s))
     )
@@ -57,14 +82,15 @@ export function CreateEvent() {
         title,
         description: description || null,
         date,
-        slots: slots.length > 0
-          ? slots.map((s) => ({
-              label: s.label,
-              startTime: s.startTime,
-              endTime: s.endTime,
-              capacity: s.capacity,
-            }))
-          : null,
+        slots:
+          slots.length > 0
+            ? slots.map((s) => ({
+                label: s.label,
+                startTime: s.startTime,
+                endTime: s.endTime,
+                capacity: s.capacity,
+              }))
+            : null,
       })
       toast.success("Event created")
       navigate("/dashboard")
@@ -127,12 +153,17 @@ export function CreateEvent() {
           )}
 
           {slots.map((slot) => (
-            <div key={slot.key} className="flex flex-wrap items-end gap-2 rounded-md border p-3">
+            <div
+              key={slot.key}
+              className="flex flex-wrap items-end gap-2 rounded-md border p-3"
+            >
               <div className="flex-1 space-y-1">
                 <Label className="text-xs">Label</Label>
                 <Input
                   value={slot.label}
-                  onChange={(e) => updateSlot(slot.key, "label", e.target.value)}
+                  onChange={(e) =>
+                    updateSlot(slot.key, "label", e.target.value)
+                  }
                   placeholder="Morning"
                   required
                   className="h-8 text-sm"
@@ -143,7 +174,9 @@ export function CreateEvent() {
                 <Input
                   type="time"
                   value={slot.startTime}
-                  onChange={(e) => updateSlot(slot.key, "startTime", e.target.value)}
+                  onChange={(e) =>
+                    updateSlot(slot.key, "startTime", e.target.value)
+                  }
                   required
                   className="h-8 text-sm"
                 />
@@ -153,7 +186,9 @@ export function CreateEvent() {
                 <Input
                   type="time"
                   value={slot.endTime}
-                  onChange={(e) => updateSlot(slot.key, "endTime", e.target.value)}
+                  onChange={(e) =>
+                    updateSlot(slot.key, "endTime", e.target.value)
+                  }
                   required
                   className="h-8 text-sm"
                 />
@@ -165,7 +200,11 @@ export function CreateEvent() {
                   min={1}
                   value={slot.capacity}
                   onChange={(e) =>
-                    updateSlot(slot.key, "capacity", parseInt(e.target.value) || 1)
+                    updateSlot(
+                      slot.key,
+                      "capacity",
+                      parseInt(e.target.value) || 1
+                    )
                   }
                   required
                   className="h-8 text-sm"
@@ -188,7 +227,11 @@ export function CreateEvent() {
           <Button type="submit" disabled={submitting}>
             {submitting ? "Creating..." : "Create Event"}
           </Button>
-          <Button type="button" variant="outline" onClick={() => navigate("/dashboard")}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => navigate("/dashboard")}
+          >
             Cancel
           </Button>
         </div>

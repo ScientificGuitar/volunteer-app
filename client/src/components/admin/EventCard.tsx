@@ -34,7 +34,11 @@ export function EventCard({ event, onDeleteSignup }: EventCardProps) {
                 </span>
               </span>
               <Badge
-                variant={slot.signups.length >= slot.capacity ? "destructive" : "secondary"}
+                variant={
+                  slot.signups.length >= slot.capacity
+                    ? "destructive"
+                    : "secondary"
+                }
                 className="text-[10px]"
               >
                 {slot.signups.length}/{slot.capacity}

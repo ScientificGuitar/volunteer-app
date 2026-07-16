@@ -36,7 +36,8 @@ export function InvitePage() {
       <div className="mx-auto max-w-md py-16 text-center">
         <h1 className="mb-2 text-2xl font-bold">Invalid invite link</h1>
         <p className="text-muted-foreground">
-          This invite link is invalid, has been revoked, or no longer points to an active event.
+          This invite link is invalid, has been revoked, or no longer points to
+          an active event.
         </p>
       </div>
     )
@@ -47,7 +48,9 @@ export function InvitePage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <header className="space-y-1 text-center">
-        <p className="text-sm font-medium text-muted-foreground">{organizationName}</p>
+        <p className="text-sm font-medium text-muted-foreground">
+          {organizationName}
+        </p>
         <h1 className="text-3xl font-bold">{event.title}</h1>
         <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
           <span className="flex items-center gap-1">
@@ -78,7 +81,9 @@ export function InvitePage() {
             slot={slot}
             onSignUp={async (volunteerName) => {
               await api.createSignup(code!, { slotId: slot.id, volunteerName })
-              await queryClient.invalidateQueries({ queryKey: ["invite", code] })
+              await queryClient.invalidateQueries({
+                queryKey: ["invite", code],
+              })
             }}
           />
         ))}
@@ -120,7 +125,10 @@ function SlotCard({ slot, onSignUp }: SlotCardProps) {
     }
   }
 
-  const percent = slot.capacity > 0 ? Math.min(100, (slot.signupCount / slot.capacity) * 100) : 0
+  const percent =
+    slot.capacity > 0
+      ? Math.min(100, (slot.signupCount / slot.capacity) * 100)
+      : 0
 
   return (
     <Card>
@@ -169,7 +177,13 @@ function SlotCard({ slot, onSignUp }: SlotCardProps) {
   )
 }
 
-function CapacityBar({ percent, isFull }: { percent: number; isFull: boolean }) {
+function CapacityBar({
+  percent,
+  isFull,
+}: {
+  percent: number
+  isFull: boolean
+}) {
   return (
     <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
       <div

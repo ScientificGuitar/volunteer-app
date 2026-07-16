@@ -35,3 +35,5 @@ export type PublicSlot = NumericFields<Schemas["SlotAvailabilityResponse"]>
 export type UpdateSlotRequest = NumericFields<Schemas["UpdateSlotRequest"]>
 
 export type TimeSlotResponse = NumericFields<Schemas["TimeSlotResponse"]>
+
+export type UserMeResponse = NumericFields<Schemas["UserMeResponse"]>

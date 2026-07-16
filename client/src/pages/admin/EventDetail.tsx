@@ -1,7 +1,15 @@
 import { useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { ArrowLeft, Trash2, Link2, Copy, Plus, Power, Pencil } from "lucide-react"
+import {
+  ArrowLeft,
+  Trash2,
+  Link2,
+  Copy,
+  Plus,
+  Power,
+  Pencil,
+} from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -15,7 +23,7 @@ import type { InviteLink } from "@/lib/types"
 
 export function EventDetail() {
   const { id } = useParams<{ id: string }>()
-  const { org, loading: orgLoading } = useOrg()
+  const { org, loading: orgLoading, error: orgError } = useOrg()
   const { data: event, isLoading, error } = useEvent(org && id ? id : undefined)
   const deleteSignup = useDeleteSignup()
   const api = useApi()
@@ -42,13 +50,32 @@ export function EventDetail() {
   }
 
   if (orgLoading || (isLoading && !event)) {
-    return <div className="py-12 text-center text-muted-foreground">Loading...</div>
+    return (
+      <div className="py-12 text-center text-muted-foreground">Loading...</div>
+    )
+  }
+
+  if (orgError) {
+    return (
+      <div className="py-12 text-center">
+        <p className="mb-4 text-muted-foreground">
+          {orgError instanceof Error
+            ? orgError.message
+            : "Failed to load organization"}
+        </p>
+        <Button variant="outline" onClick={() => navigate("/dashboard")}>
+          Back to Dashboard
+        </Button>
+      </div>
+    )
   }
 
   if (error || !event) {
     return (
       <div className="py-12 text-center">
-        <p className="mb-4 text-muted-foreground">{error instanceof Error ? error.message : "Event not found"}</p>
+        <p className="mb-4 text-muted-foreground">
+          {error instanceof Error ? error.message : "Event not found"}
+        </p>
         <Button variant="outline" onClick={() => navigate("/dashboard")}>
           Back to Dashboard
         </Button>
@@ -59,14 +86,22 @@ export function EventDetail() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate("/dashboard")}
+        >
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
           <h1 className="text-2xl font-bold">{event.title}</h1>
           <p className="text-sm text-muted-foreground">{event.date}</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => navigate(`/events/${event.id}/edit`)}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate(`/events/${event.id}/edit`)}
+        >
           <Pencil className="mr-1 h-3 w-3" />
           Edit
         </Button>
@@ -79,7 +114,9 @@ export function EventDetail() {
 
       <div className="space-y-4">
         {event.slots.length === 0 && (
-          <p className="text-center text-muted-foreground">No time slots for this event.</p>
+          <p className="text-center text-muted-foreground">
+            No time slots for this event.
+          </p>
         )}
         {event.slots.map((slot) => (
           <Card key={slot.id}>
@@ -92,7 +129,11 @@ export function EventDetail() {
                   </span>
                 </span>
                 <Badge
-                  variant={slot.signups.length >= slot.capacity ? "destructive" : "secondary"}
+                  variant={
+                    slot.signups.length >= slot.capacity
+                      ? "destructive"
+                      : "secondary"
+                  }
                 >
                   {slot.signups.length}/{slot.capacity}
                 </Badge>
@@ -100,7 +141,9 @@ export function EventDetail() {
             </CardHeader>
             <CardContent className="p-4 pt-3">
               {slot.signups.length === 0 && (
-                <p className="text-sm text-muted-foreground italic">No signups yet</p>
+                <p className="text-sm text-muted-foreground italic">
+                  No signups yet
+                </p>
               )}
               {slot.signups.length > 0 && (
                 <table className="w-full text-sm">
@@ -177,7 +220,12 @@ function InviteLinkSection({ eventId }: InviteLinkSectionProps) {
   }
 
   const handleRevoke = async (link: InviteLink) => {
-    if (!confirm("Revoke this invite link? Volunteers using it will see an invalid link.")) return
+    if (
+      !confirm(
+        "Revoke this invite link? Volunteers using it will see an invalid link."
+      )
+    )
+      return
     try {
       await api.revokeInviteLink(link.id)
       toast.success("Invite link revoked")

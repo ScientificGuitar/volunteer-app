@@ -29,15 +29,32 @@ function formatDayHeader(d: Date): string {
 function formatWeekRange(monday: Date): string {
   const sunday = new Date(monday)
   sunday.setDate(sunday.getDate() + 6)
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ]
   return `${months[monday.getMonth()]} ${monday.getDate()} – ${months[sunday.getMonth()]} ${sunday.getDate()}, ${sunday.getFullYear()}`
 }
 
 export function WeeklyGrid({ orgId }: WeeklyGridProps) {
   const [monday, setMonday] = useState(() => getMonday(new Date()))
   const weekStart = formatDate(monday)
-  const { data: events, isLoading, error, refetch } = useRoster(orgId, weekStart)
+  const {
+    data: events,
+    isLoading,
+    error,
+    refetch,
+  } = useRoster(orgId, weekStart)
   const deleteSignup = useDeleteSignup()
 
   const days = Array.from({ length: 7 }, (_, i) => {
@@ -89,10 +106,14 @@ export function WeeklyGrid({ orgId }: WeeklyGridProps) {
       </div>
 
       {isLoading && !events && (
-        <div className="py-12 text-center text-muted-foreground">Loading roster...</div>
+        <div className="py-12 text-center text-muted-foreground">
+          Loading roster...
+        </div>
       )}
       {error && (
-        <div className="py-12 text-center text-destructive">{(error as Error).message}</div>
+        <div className="py-12 text-center text-destructive">
+          {(error as Error).message}
+        </div>
       )}
       {!isLoading && !error && events?.length === 0 && (
         <div className="py-12 text-center text-muted-foreground">

@@ -7,6 +7,7 @@ import type {
   CreateSlotRequest,
   UpdateSlotRequest,
   TimeSlotResponse,
+  UserMeResponse,
 } from "@/lib/types"
 
 const BASE = "/api"
@@ -14,7 +15,11 @@ const BASE = "/api"
 export class ApiError extends Error {
   status: number
   fields?: Record<string, string[]>
-  constructor(status: number, message: string, fields?: Record<string, string[]>) {
+  constructor(
+    status: number,
+    message: string,
+    fields?: Record<string, string[]>
+  ) {
     super(message)
     this.status = status
     this.fields = fields
@@ -29,7 +34,10 @@ async function authHeaders(getToken: () => Promise<string | null>) {
   }
 }
 
-function parseErrorBody(body: unknown): { message: string; fields?: Record<string, string[]> } {
+function parseErrorBody(body: unknown): {
+  message: string
+  fields?: Record<string, string[]>
+} {
   if (!body || typeof body !== "object") return { message: "" }
   const b = body as Record<string, unknown>
   const fields =
@@ -65,6 +73,11 @@ export function createAdminApi(getToken: () => Promise<string | null>) {
   const h = () => authHeaders(getToken)
 
   return {
+    getCurrentUser: async () => {
+      const res = await fetch(`${BASE}/user/me`, { headers: await h() })
+      return checkJson<UserMeResponse>(res)
+    },
+
     createOrganization: async (name: string) => {
       const res = await fetch(`${BASE}/organizations`, {
         method: "POST",
@@ -83,7 +96,10 @@ export function createAdminApi(getToken: () => Promise<string | null>) {
       return checkJson<{ id: string }>(res)
     },
 
-    updateEvent: async (eventId: string, data: { title?: string; description?: string | null; date?: string }) => {
+    updateEvent: async (
+      eventId: string,
+      data: { title?: string; description?: string | null; date?: string }
+    ) => {
       const res = await fetch(`${BASE}/events/${eventId}`, {
         method: "PUT",
         headers: await h(),
@@ -114,7 +130,11 @@ export function createAdminApi(getToken: () => Promise<string | null>) {
       return checkJson<TimeSlotResponse>(res)
     },
 
-    updateSlot: async (eventId: string, slotId: string, data: UpdateSlotRequest) => {
+    updateSlot: async (
+      eventId: string,
+      slotId: string,
+      data: UpdateSlotRequest
+    ) => {
       const res = await fetch(`${BASE}/events/${eventId}/slots/${slotId}`, {
         method: "PUT",
         headers: await h(),
@@ -132,9 +152,12 @@ export function createAdminApi(getToken: () => Promise<string | null>) {
     },
 
     getRoster: async (orgId: string, weekStart: string) => {
-      const res = await fetch(`${BASE}/organizations/${orgId}/roster?weekStart=${weekStart}`, {
-        headers: await h(),
-      })
+      const res = await fetch(
+        `${BASE}/organizations/${orgId}/roster?weekStart=${weekStart}`,
+        {
+          headers: await h(),
+        }
+      )
       return checkJson<RosterEvent[]>(res)
     },
 
@@ -181,13 +204,21 @@ export function createPublicApi() {
       return checkJson<PublicInviteData>(res)
     },
 
-    createSignup: async (code: string, data: { slotId: string; volunteerName: string }) => {
+    createSignup: async (
+      code: string,
+      data: { slotId: string; volunteerName: string }
+    ) => {
       const res = await fetch(`${BASE}/invite/${code}/signups`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       })
-      return checkJson<{ id: string; slotId: string; volunteerName: string; createdAt: string }>(res)
+      return checkJson<{
+        id: string
+        slotId: string
+        volunteerName: string
+        createdAt: string
+      }>(res)
     },
   }
 }
