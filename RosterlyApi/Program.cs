@@ -65,6 +65,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<AppDbContext>();
+
 builder.Services.AddProblemDetails();
 
 builder.Services.AddCors(options =>
@@ -143,6 +146,8 @@ app.UseExceptionHandler(eh => eh.Run(async ctx =>
         Instance = ctx.Request.Path
     });
 }));
+
+app.MapHealthChecks("/health");
 
 app.UseAuthentication();
 app.UseAuthorization();
