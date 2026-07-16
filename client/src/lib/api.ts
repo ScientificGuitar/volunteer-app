@@ -4,6 +4,9 @@ import type {
   CreateInviteLinkResponse,
   InviteLink,
   PublicInviteData,
+  CreateSlotRequest,
+  UpdateSlotRequest,
+  TimeSlotResponse,
 } from "@/lib/types"
 
 const BASE = "/api"
@@ -96,6 +99,32 @@ export function createAdminApi(getToken: () => Promise<string | null>) {
 
     deleteEvent: async (eventId: string) => {
       const res = await fetch(`${BASE}/events/${eventId}`, {
+        method: "DELETE",
+        headers: await h(),
+      })
+      await checkVoid(res)
+    },
+
+    createSlot: async (eventId: string, data: CreateSlotRequest) => {
+      const res = await fetch(`${BASE}/events/${eventId}/slots`, {
+        method: "POST",
+        headers: await h(),
+        body: JSON.stringify(data),
+      })
+      return checkJson<TimeSlotResponse>(res)
+    },
+
+    updateSlot: async (eventId: string, slotId: string, data: UpdateSlotRequest) => {
+      const res = await fetch(`${BASE}/events/${eventId}/slots/${slotId}`, {
+        method: "PUT",
+        headers: await h(),
+        body: JSON.stringify(data),
+      })
+      return checkJson<TimeSlotResponse>(res)
+    },
+
+    deleteSlot: async (eventId: string, slotId: string) => {
+      const res = await fetch(`${BASE}/events/${eventId}/slots/${slotId}`, {
         method: "DELETE",
         headers: await h(),
       })

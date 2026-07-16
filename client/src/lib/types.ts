@@ -22,12 +22,7 @@ export type InviteLink = Schemas["InviteLinkResponse"]
 
 export type CreateInviteLinkResponse = Schemas["InviteLinkResponse"]
 
-export type CreateEventRequest = {
-  title: string
-  description: string | null
-  date: string
-  slots: CreateSlotRequest[] | null
-}
+export type CreateEventRequest = NumericFields<Schemas["CreateEventRequest"]>
 
 export type CreateSlotRequest = NumericFields<Schemas["CreateSlotRequest"]>
 
@@ -36,3 +31,7 @@ export type PublicInviteData = NumericFields<Schemas["InvitePageResponse"]>
 export type PublicEvent = NumericFields<Schemas["EventPublicResponse"]>
 
 export type PublicSlot = NumericFields<Schemas["SlotAvailabilityResponse"]>
+
+export type UpdateSlotRequest = NumericFields<Schemas["UpdateSlotRequest"]>
+
+export type TimeSlotResponse = NumericFields<Schemas["TimeSlotResponse"]>

@@ -1,15 +1,21 @@
 import { Toaster } from "sonner"
 import { Show, UserButton, useClerk } from "@clerk/react"
 import { Moon, Sun, LayoutDashboard, CalendarPlus } from "lucide-react"
-import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom"
+import { Routes, Route, Navigate, Link, useLocation, useParams } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import { useTheme } from "@/components/theme-provider"
 import { Dashboard } from "@/pages/admin/Dashboard"
 import { CreateEvent } from "@/pages/admin/CreateEvent"
 import { EventDetail } from "@/pages/admin/EventDetail"
+import { EditEvent } from "@/pages/admin/EditEvent"
 import { InvitePage } from "@/pages/public/InvitePage"
 import { cn } from "@/lib/utils"
+
+function EditEventWrapper() {
+  const { id } = useParams()
+  return <EditEvent key={id} />
+}
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -119,6 +125,7 @@ export function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/events/new" element={<CreateEvent />} />
             <Route path="/events/:id" element={<EventDetail />} />
+            <Route path="/events/:id/edit" element={<EditEventWrapper />} />
           </Routes>
         </Show>
         <Show when="signed-out">

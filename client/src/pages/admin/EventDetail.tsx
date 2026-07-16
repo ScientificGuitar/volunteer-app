@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { ArrowLeft, Trash2, Link2, Copy, Plus, Power } from "lucide-react"
+import { ArrowLeft, Trash2, Link2, Copy, Plus, Power, Pencil } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -66,6 +66,10 @@ export function EventDetail() {
           <h1 className="text-2xl font-bold">{event.title}</h1>
           <p className="text-sm text-muted-foreground">{event.date}</p>
         </div>
+        <Button variant="outline" size="sm" onClick={() => navigate(`/events/${event.id}/edit`)}>
+          <Pencil className="mr-1 h-3 w-3" />
+          Edit
+        </Button>
         <Button variant="destructive" size="sm" onClick={handleDeleteEvent}>
           Delete Event
         </Button>
