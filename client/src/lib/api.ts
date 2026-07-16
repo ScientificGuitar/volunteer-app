@@ -10,9 +10,11 @@ const BASE = "/api"
 
 export class ApiError extends Error {
   status: number
-  constructor(status: number, message: string) {
+  fields?: Record<string, string[]>
+  constructor(status: number, message: string, fields?: Record<string, string[]>) {
     super(message)
     this.status = status
+    this.fields = fields
   }
 }
 
@@ -24,10 +26,26 @@ async function authHeaders(getToken: () => Promise<string | null>) {
   }
 }
 
+function parseErrorBody(body: unknown): { message: string; fields?: Record<string, string[]> } {
+  if (!body || typeof body !== "object") return { message: "" }
+  const b = body as Record<string, unknown>
+  const fields =
+    b.errors && typeof b.errors === "object"
+      ? (b.errors as Record<string, string[]>)
+      : undefined
+  const message =
+    (typeof b.title === "string" && b.title) ||
+    (typeof b.error === "string" && b.error) ||
+    (typeof b.detail === "string" && b.detail) ||
+    ""
+  return { message, fields }
+}
+
 async function checkJson<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw new ApiError(res.status, body.error ?? res.statusText)
+    const { message, fields } = parseErrorBody(body)
+    throw new ApiError(res.status, message || res.statusText, fields)
   }
   return res.json()
 }
@@ -35,7 +53,8 @@ async function checkJson<T>(res: Response): Promise<T> {
 async function checkVoid(res: Response): Promise<void> {
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw new ApiError(res.status, body.error ?? res.statusText)
+    const { message, fields } = parseErrorBody(body)
+    throw new ApiError(res.status, message || res.statusText, fields)
   }
 }
 

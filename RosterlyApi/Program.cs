@@ -1,6 +1,10 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RosterlyApi.Endpoints;
+using RosterlyApi.Validation;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,6 +29,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddAuthorization();
+
+builder.Services.AddProblemDetails();
 
 builder.Services.AddCors(options =>
 {
@@ -60,6 +66,49 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.UseCors("AllowFrontend");
+
+app.UseExceptionHandler(eh => eh.Run(async ctx =>
+{
+    var feature = ctx.Features.Get<IExceptionHandlerFeature>();
+    var ex = feature?.Error;
+
+    var (status, title) = ex switch
+    {
+        UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Unauthorized"),
+        KeyNotFoundException => (StatusCodes.Status404NotFound, "Not found"),
+        BadHttpRequestException bad => (bad.StatusCode, "Bad request"),
+        DbUpdateException dbEx when DbConflictDetector.IsConflict(dbEx) => (StatusCodes.Status409Conflict, "Database conflict"),
+        DbUpdateException dbEx when DbConflictDetector.IsClientReferenceError(dbEx) => (StatusCodes.Status400BadRequest, "Bad request"),
+        DbUpdateException => (StatusCodes.Status500InternalServerError, "Server error"),
+        _ => (StatusCodes.Status500InternalServerError, "Server error")
+    };
+
+    var logger = ctx.RequestServices.GetRequiredService<ILoggerFactory>()
+        .CreateLogger("GlobalExceptionHandler");
+    if (status == StatusCodes.Status500InternalServerError)
+        logger.LogError(ex, "Unhandled exception");
+    else
+        logger.LogWarning(ex, "Request failed with {Status}", status);
+
+    ctx.Response.StatusCode = status;
+    ctx.Response.ContentType = "application/problem+json";
+    await ctx.Response.WriteAsJsonAsync(new ProblemDetails
+    {
+        Status = status,
+        Title = title,
+        Type = status switch
+        {
+            StatusCodes.Status400BadRequest => "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+            StatusCodes.Status401Unauthorized => "https://tools.ietf.org/html/rfc9110#section-15.5.2",
+            StatusCodes.Status404NotFound => "https://tools.ietf.org/html/rfc9110#section-15.5.5",
+            StatusCodes.Status409Conflict => "https://tools.ietf.org/html/rfc9110#section-15.5.10",
+            StatusCodes.Status500InternalServerError => "https://tools.ietf.org/html/rfc9110#section-15.6.1",
+            _ => "about:blank"
+        },
+        Instance = ctx.Request.Path
+    });
+}));
+
 app.UseAuthentication();
 app.UseAuthorization();
 

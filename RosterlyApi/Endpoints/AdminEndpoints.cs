@@ -1,6 +1,10 @@
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
+
 using Microsoft.EntityFrameworkCore;
+
 using RosterlyApi.Entities;
+using RosterlyApi.Validation;
 
 namespace RosterlyApi.Endpoints;
 
@@ -8,7 +12,7 @@ public static class AdminEndpoints
 {
     public static WebApplication MapAdminEndpoints(this WebApplication app)
     {
-        var admin = app.MapGroup("/api").RequireAuthorization();
+        var admin = app.MapGroup("/api").RequireAuthorization().AddEndpointFilter<ValidateDtoFilter>();
 
         admin.MapPost("/organizations", CreateOrganization);
         admin.MapGet("/organizations/{id}", GetOrganization);
@@ -214,6 +218,14 @@ public static class AdminEndpoints
         if (request.EndTime is not null) slot.EndTime = request.EndTime.Value;
         if (request.Capacity is not null) slot.Capacity = request.Capacity.Value;
 
+        if (slot.EndTime <= slot.StartTime)
+        {
+            return Results.ValidationProblem(new Dictionary<string, string[]>
+            {
+                ["EndTime"] = new[] { "EndTime must be after StartTime." }
+            });
+        }
+
         await db.SaveChangesAsync(ct);
 
         var signupCount = await db.Signups.CountAsync(s => s.TimeSlotId == slotId, ct);
@@ -369,15 +381,64 @@ public static class AdminEndpoints
 
 // --- Request DTOs ---
 
-public record CreateOrganizationRequest(string Name);
+public record CreateOrganizationRequest(
+    [property: Required, NotWhitespace, StringLength(200)] string Name);
 
-public record CreateEventRequest(string Title, string? Description, DateOnly Date, List<CreateSlotRequest>? Slots);
+public record CreateEventRequest(
+    [property: Required, NotWhitespace, StringLength(300)] string Title,
+    [property: NotWhitespace, StringLength(2000)] string? Description,
+    DateOnly Date,
+    [property: MaxLength(50)] List<CreateSlotRequest>? Slots) : IValidatableObject
+{
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (Date == default)
+        {
+            yield return new ValidationResult(
+                "Date is required.",
+                new[] { nameof(Date) });
+        }
+    }
+}
 
-public record UpdateEventRequest(string? Title, string? Description, DateOnly? Date);
+public record UpdateEventRequest(
+    [property: NotWhitespace, StringLength(300)] string? Title,
+    [property: NotWhitespace, StringLength(2000)] string? Description,
+    DateOnly? Date) : IValidatableObject
+{
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (Date is { } d && d == default)
+        {
+            yield return new ValidationResult(
+                "Date is required when supplied.",
+                new[] { nameof(Date) });
+        }
+    }
+}
 
-public record CreateSlotRequest(string Label, TimeOnly StartTime, TimeOnly EndTime, int Capacity);
+public record CreateSlotRequest(
+    [property: Required, NotWhitespace, StringLength(200)] string Label,
+    TimeOnly StartTime,
+    TimeOnly EndTime,
+    [property: Range(1, 10_000)] int Capacity) : IValidatableObject
+{
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (EndTime <= StartTime)
+        {
+            yield return new ValidationResult(
+                "EndTime must be after StartTime.",
+                new[] { nameof(EndTime), nameof(StartTime) });
+        }
+    }
+}
 
-public record UpdateSlotRequest(string? Label, TimeOnly? StartTime, TimeOnly? EndTime, int? Capacity);
+public record UpdateSlotRequest(
+    [property: NotWhitespace, StringLength(200)] string? Label,
+    TimeOnly? StartTime,
+    TimeOnly? EndTime,
+    [property: Range(1, 10_000)] int? Capacity);
 
 // --- Response DTOs ---
 

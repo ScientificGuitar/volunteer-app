@@ -1,5 +1,9 @@
+using System.ComponentModel.DataAnnotations;
+
 using Microsoft.EntityFrameworkCore;
+
 using RosterlyApi.Entities;
+using RosterlyApi.Validation;
 
 namespace RosterlyApi.Endpoints;
 
@@ -7,7 +11,7 @@ public static class PublicEndpoints
 {
     public static WebApplication MapPublicEndpoints(this WebApplication app)
     {
-        var pub = app.MapGroup("/api/invite");
+        var pub = app.MapGroup("/api/invite").AddEndpointFilter<ValidateDtoFilter>();
 
         pub.MapGet("/{code}", GetInvitePage);
         pub.MapPost("/{code}/signups", CreateSignup);
@@ -94,7 +98,21 @@ public static class PublicEndpoints
 
 // --- Request DTOs ---
 
-public record PublicSignupRequest(Guid SlotId, string VolunteerName);
+public record PublicSignupRequest(
+    Guid SlotId,
+    [property: Required, NotWhitespace, StringLength(200)] string VolunteerName)
+    : IValidatableObject
+{
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (SlotId == Guid.Empty)
+        {
+            yield return new ValidationResult(
+                "SlotId is required.",
+                new[] { nameof(SlotId) });
+        }
+    }
+}
 
 // --- Response DTOs ---
 
