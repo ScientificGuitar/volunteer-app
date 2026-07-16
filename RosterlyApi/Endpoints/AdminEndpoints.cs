@@ -213,6 +213,16 @@ public static class AdminEndpoints
 
         if (slot is null) return Results.NotFound();
 
+        var signupCount = await db.Signups.CountAsync(s => s.TimeSlotId == slotId, ct);
+
+        if (request.Capacity is not null && request.Capacity.Value < signupCount)
+        {
+            return Results.ValidationProblem(new Dictionary<string, string[]>
+            {
+                ["Capacity"] = new[] { $"Capacity cannot be less than the current signup count ({signupCount})." }
+            });
+        }
+
         if (request.Label is not null) slot.Label = request.Label;
         if (request.StartTime is not null) slot.StartTime = request.StartTime.Value;
         if (request.EndTime is not null) slot.EndTime = request.EndTime.Value;
@@ -228,7 +238,6 @@ public static class AdminEndpoints
 
         await db.SaveChangesAsync(ct);
 
-        var signupCount = await db.Signups.CountAsync(s => s.TimeSlotId == slotId, ct);
         return Results.Ok(new TimeSlotResponse(slot.Id, slot.EventId, slot.Label, slot.StartTime, slot.EndTime, slot.Capacity, signupCount));
     }
 
