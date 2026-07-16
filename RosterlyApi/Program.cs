@@ -9,7 +9,10 @@ using RosterlyApi.Validation;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        npgsql => npgsql.EnableRetryOnFailure()
+    ));
 
 var clerkIssuer = builder.Configuration["Clerk:Issuer"]
     ?? throw new InvalidOperationException("Clerk:Issuer is not configured");

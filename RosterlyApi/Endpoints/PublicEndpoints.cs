@@ -60,17 +60,20 @@ public static class PublicEndpoints
         if (link is null || link.EventId is null)
             return Results.NotFound(new { error = "Invite link not found or expired" });
 
-        var slot = await db.TimeSlots
-            .FirstOrDefaultAsync(s => s.Id == request.SlotId && s.EventId == link.EventId, ct);
-
-        if (slot is null)
-            return Results.NotFound(new { error = "Time slot not found" });
-
         var strategy = db.Database.CreateExecutionStrategy();
 
         return await strategy.ExecuteAsync(async () =>
         {
             using var tx = await db.Database.BeginTransactionAsync(ct);
+
+            var slot = await db.TimeSlots
+                .FromSqlRaw(
+                    "SELECT * FROM \"TimeSlots\" WHERE \"Id\" = {0} AND \"EventId\" = {1} FOR UPDATE",
+                    request.SlotId, link.EventId)
+                .FirstOrDefaultAsync(ct);
+
+            if (slot is null)
+                return Results.NotFound(new { error = "Time slot not found" });
 
             var signupCount = await db.Signups.CountAsync(s => s.TimeSlotId == request.SlotId, ct);
 
