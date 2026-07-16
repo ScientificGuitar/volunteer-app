@@ -14,27 +14,76 @@ public static class AdminEndpoints
     {
         var admin = app.MapGroup("/api").RequireAuthorization().AddEndpointFilter<ValidateDtoFilter>();
 
-        admin.MapPost("/organizations", CreateOrganization);
-        admin.MapGet("/organizations/{id}", GetOrganization);
+        admin.MapPost("/organizations", CreateOrganization)
+            .Produces<OrganizationResponse>(201)
+            .Produces(400)
+            .Produces(401);
+        admin.MapGet("/organizations/{id}", GetOrganization)
+            .Produces<OrganizationResponse>()
+            .Produces(401)
+            .Produces(404);
 
-        admin.MapPost("/organizations/{orgId}/events", CreateEvent);
-        admin.MapGet("/organizations/{orgId}/events", ListEvents);
-        admin.MapPut("/events/{id}", UpdateEvent);
-        admin.MapDelete("/events/{id}", DeleteEvent);
+        admin.MapPost("/organizations/{orgId}/events", CreateEvent)
+            .Produces<EventResponse>(201)
+            .Produces(400)
+            .Produces(401)
+            .Produces(404);
+        admin.MapGet("/organizations/{orgId}/events", ListEvents)
+            .Produces<IEnumerable<EventWithSlotsResponse>>()
+            .Produces(401)
+            .Produces(404);
+        admin.MapPut("/events/{id}", UpdateEvent)
+            .Produces<EventResponse>()
+            .Produces(400)
+            .Produces(401)
+            .Produces(404);
+        admin.MapDelete("/events/{id}", DeleteEvent)
+            .Produces(204)
+            .Produces(401)
+            .Produces(404);
 
-        admin.MapPost("/events/{eventId}/slots", CreateSlot);
-        admin.MapPut("/events/{eventId}/slots/{slotId}", UpdateSlot);
-        admin.MapDelete("/events/{eventId}/slots/{slotId}", DeleteSlot);
+        admin.MapPost("/events/{eventId}/slots", CreateSlot)
+            .Produces<TimeSlotResponse>(201)
+            .Produces(400)
+            .Produces(401)
+            .Produces(404);
+        admin.MapPut("/events/{eventId}/slots/{slotId}", UpdateSlot)
+            .Produces<TimeSlotResponse>()
+            .Produces(400)
+            .Produces(401)
+            .Produces(404);
+        admin.MapDelete("/events/{eventId}/slots/{slotId}", DeleteSlot)
+            .Produces(204)
+            .Produces(401)
+            .Produces(404);
 
-        admin.MapGet("/organizations/{orgId}/roster", GetRoster);
+        admin.MapGet("/organizations/{orgId}/roster", GetRoster)
+            .Produces<IEnumerable<RosterEventResponse>>()
+            .Produces(401)
+            .Produces(404);
 
-        admin.MapDelete("/signups/{id}", DeleteSignup);
+        admin.MapDelete("/signups/{id}", DeleteSignup)
+            .Produces(204)
+            .Produces(401)
+            .Produces(404);
 
-        admin.MapGet("/events/{id}", GetEvent);
+        admin.MapGet("/events/{id}", GetEvent)
+            .Produces<RosterEventResponse>()
+            .Produces(401)
+            .Produces(404);
 
-        admin.MapPost("/events/{eventId}/invite-links", CreateInviteLink);
-        admin.MapGet("/events/{eventId}/invite-links", ListInviteLinks);
-        admin.MapPut("/invite-links/{id}/revoke", RevokeInviteLink);
+        admin.MapPost("/events/{eventId}/invite-links", CreateInviteLink)
+            .Produces<InviteLinkResponse>()
+            .Produces(401)
+            .Produces(404);
+        admin.MapGet("/events/{eventId}/invite-links", ListInviteLinks)
+            .Produces<IEnumerable<InviteLinkResponse>>()
+            .Produces(401)
+            .Produces(404);
+        admin.MapPut("/invite-links/{id}/revoke", RevokeInviteLink)
+            .Produces(204)
+            .Produces(401)
+            .Produces(404);
 
         return app;
     }

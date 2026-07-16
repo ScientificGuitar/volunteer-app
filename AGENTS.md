@@ -23,11 +23,14 @@
 - `npm run lint` — ESLint
 - `npm run format` — Prettier write
 - `npm run typecheck` — `tsc --noEmit`
+- Generate API types from OpenAPI spec (backend must be running): `npm run generate:types`
 - Add shadcn component: `npx shadcn@latest add <component>`
 
 **Backend** (`RosterlyApi/`):
 - `dotnet restore` / `dotnet build` / `dotnet run`
 - Migrations (EF Core tools installed): `dotnet ef migrations add <name>`, `dotnet ef database update`
+- Scalar API docs: `http://localhost:5000/scalar/v1` (when running)
+- Raw OpenAPI spec: `http://localhost:5000/openapi/v1.json`
 
 **Docker Compose** (root):
 - `docker compose up --build` — builds images, starts db, backend, frontend

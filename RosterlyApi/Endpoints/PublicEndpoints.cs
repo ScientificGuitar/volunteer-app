@@ -13,8 +13,14 @@ public static class PublicEndpoints
     {
         var pub = app.MapGroup("/api/invite").AddEndpointFilter<ValidateDtoFilter>();
 
-        pub.MapGet("/{code}", GetInvitePage);
-        pub.MapPost("/{code}/signups", CreateSignup);
+        pub.MapGet("/{code}", GetInvitePage)
+            .Produces<InvitePageResponse>()
+            .Produces(404);
+        pub.MapPost("/{code}/signups", CreateSignup)
+            .Produces<PublicSignupResponse>(201)
+            .Produces(400)
+            .Produces(404)
+            .Produces(409);
 
         return app;
     }

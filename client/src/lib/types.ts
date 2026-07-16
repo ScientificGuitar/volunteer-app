@@ -1,77 +1,38 @@
-export interface RosterEvent {
-  id: string
+import type { components } from "@/lib/generated/schema"
+
+type Schemas = components["schemas"]
+
+type Num<T> = number extends T ? number : T
+
+type NumericFields<T> = {
+  [K in keyof T]: T[K] extends Array<infer U>
+    ? Array<NumericFields<U>>
+    : T[K] extends object
+      ? NumericFields<T[K]>
+      : Num<T[K]>
+}
+
+export type RosterEvent = NumericFields<Schemas["RosterEventResponse"]>
+
+export type RosterSlot = NumericFields<Schemas["RosterSlotResponse"]>
+
+export type SignupInfo = Schemas["SignupResponse"]
+
+export type InviteLink = Schemas["InviteLinkResponse"]
+
+export type CreateInviteLinkResponse = Schemas["InviteLinkResponse"]
+
+export type CreateEventRequest = {
   title: string
   description: string | null
   date: string
-  slots: RosterSlot[]
+  slots: CreateSlotRequest[] | null
 }
 
-export interface RosterSlot {
-  id: string
-  label: string
-  startTime: string
-  endTime: string
-  capacity: number
-  signups: SignupInfo[]
-}
+export type CreateSlotRequest = NumericFields<Schemas["CreateSlotRequest"]>
 
-export interface SignupInfo {
-  id: string
-  slotId: string
-  volunteerName: string
-  createdAt: string
-}
+export type PublicInviteData = NumericFields<Schemas["InvitePageResponse"]>
 
-export interface InviteLink {
-  id: string
-  eventId: string | null
-  code: string
-  isActive: boolean
-  createdAt: string
-}
+export type PublicEvent = NumericFields<Schemas["EventPublicResponse"]>
 
-export interface CreateInviteLinkResponse {
-  id: string
-  eventId: string | null
-  code: string
-  isActive: boolean
-  createdAt: string
-}
-
-export interface CreateEventRequest {
-  title: string
-  description?: string
-  date: string
-  slots?: CreateSlotRequest[]
-}
-
-export interface CreateSlotRequest {
-  label: string
-  startTime: string
-  endTime: string
-  capacity: number
-}
-
-export interface PublicInviteData {
-  organizationId: string
-  organizationName: string
-  event: PublicEvent | null
-}
-
-export interface PublicEvent {
-  id: string
-  title: string
-  description: string | null
-  date: string
-  slots: PublicSlot[]
-}
-
-export interface PublicSlot {
-  id: string
-  label: string
-  startTime: string
-  endTime: string
-  capacity: number
-  signupCount: number
-  isFull: boolean
-}
+export type PublicSlot = NumericFields<Schemas["SlotAvailabilityResponse"]>

@@ -44,15 +44,6 @@ export function InvitePage() {
 
   const { organizationName, event } = data
 
-  if (!event) {
-    return (
-      <div className="mx-auto max-w-md py-16 text-center">
-        <h1 className="mb-2 text-2xl font-bold">{organizationName}</h1>
-        <p className="text-muted-foreground">This event is no longer available.</p>
-      </div>
-    )
-  }
-
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <header className="space-y-1 text-center">

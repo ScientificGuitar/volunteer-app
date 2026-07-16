@@ -223,6 +223,30 @@ Used for:
 - cancellations
 - invitations
 
+# API Documentation
+
+The backend exposes a machine-readable OpenAPI specification.
+
+## Scalar UI (interactive API docs)
+When the backend is running, browse to:
+```
+http://localhost:5000/scalar/v1
+```
+
+## Raw OpenAPI JSON
+```
+http://localhost:5000/openapi/v1.json
+```
+
+## Frontend type generation
+TypeScript types are auto-generated from the OpenAPI spec using `openapi-typescript`.  
+With the backend running:
+```
+cd client
+npm run generate:types
+```
+This updates `client/src/lib/generated/schema.ts`. The file `client/src/lib/types.ts` re-exports from the generated schema under friendly names.
+
 # UI / Design Direction
 Design goals:
 - simple

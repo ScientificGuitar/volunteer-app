@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RosterlyApi.Endpoints;
 using RosterlyApi.Validation;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -85,6 +86,8 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.AddOpenApi();
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -152,7 +155,8 @@ app.MapHealthChecks("/health");
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/", () => "Hello World!");
+app.MapOpenApi();
+app.MapScalarApiReference();
 
 app.MapGet("/api/user/me", async (HttpContext http, AppDbContext db) =>
 {
@@ -161,16 +165,21 @@ app.MapGet("/api/user/me", async (HttpContext http, AppDbContext db) =>
 
     var org = await db.Organizations.FirstOrDefaultAsync(o => o.ClerkUserId == userId);
 
-    return Results.Ok(new
-    {
-        UserId = userId,
-        Organization = org is null ? null : new { org.Id, org.Name }
-    });
-}).RequireAuthorization();
+    return Results.Ok(new UserMeResponse(
+        userId,
+        org is null ? null : new UserMeOrganization(org.Id, org.Name)
+    ));
+})
+.RequireAuthorization()
+.Produces<UserMeResponse>()
+.Produces(401);
 
 app.MapAdminEndpoints();
 app.MapPublicEndpoints();
 
 app.Run();
+
+public record UserMeResponse(string UserId, UserMeOrganization? Organization);
+public record UserMeOrganization(Guid Id, string Name);
 
 public partial class Program { }

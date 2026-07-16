@@ -55,7 +55,7 @@ export function CreateEvent() {
     try {
       await api.createEvent(org.id, {
         title,
-        description: description || undefined,
+        description: description || null,
         date,
         slots: slots.length > 0
           ? slots.map((s) => ({
@@ -64,7 +64,7 @@ export function CreateEvent() {
               endTime: s.endTime,
               capacity: s.capacity,
             }))
-          : undefined,
+          : null,
       })
       toast.success("Event created")
       navigate("/dashboard")
