@@ -1,7 +1,6 @@
 import type {
   RosterEvent,
   CreateEventRequest,
-  CreateInviteLinkResponse,
   InviteLink,
   PublicInviteData,
   CreateSlotRequest,
@@ -175,7 +174,7 @@ export function createAdminApi(getToken: () => Promise<string | null>) {
         headers: await h(),
         body: JSON.stringify({}),
       })
-      return checkJson<CreateInviteLinkResponse>(res)
+      return checkJson<InviteLink>(res)
     },
 
     listInviteLinks: async (eventId: string) => {

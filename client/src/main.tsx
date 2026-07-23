@@ -17,12 +17,19 @@ const queryClient = new QueryClient({
   },
 })
 
+const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
+if (!CLERK_PUBLISHABLE_KEY) {
+  throw new Error(
+    "Missing VITE_CLERK_PUBLISHABLE_KEY. Copy .env.example to .env and set the Clerk publishable key."
+  )
+}
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
         <ClerkProvider
-          publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}
+          publishableKey={CLERK_PUBLISHABLE_KEY}
           appearance={{ theme: shadcn }}
         >
           <ThemeProvider>

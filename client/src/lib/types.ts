@@ -20,8 +20,6 @@ export type SignupInfo = Schemas["SignupResponse"]
 
 export type InviteLink = Schemas["InviteLinkResponse"]
 
-export type CreateInviteLinkResponse = Schemas["InviteLinkResponse"]
-
 export type CreateEventRequest = NumericFields<Schemas["CreateEventRequest"]>
 
 export type CreateSlotRequest = NumericFields<Schemas["CreateSlotRequest"]>
