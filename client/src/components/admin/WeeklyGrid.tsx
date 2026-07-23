@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { EventCard } from "@/components/admin/EventCard"
@@ -79,12 +79,15 @@ export function WeeklyGrid({ orgId }: WeeklyGridProps) {
     await deleteSignup.mutateAsync(signupId)
   }
 
-  const eventsByDate = new Map<string, typeof events>()
-  for (const evt of events ?? []) {
-    const existing = eventsByDate.get(evt.date) ?? []
-    existing.push(evt)
-    eventsByDate.set(evt.date, existing)
-  }
+  const eventsByDate = useMemo(() => {
+    const map = new Map<string, NonNullable<typeof events>>()
+    for (const evt of events ?? []) {
+      const existing = map.get(evt.date) ?? []
+      existing.push(evt)
+      map.set(evt.date, existing)
+    }
+    return map
+  }, [events])
 
   return (
     <div>

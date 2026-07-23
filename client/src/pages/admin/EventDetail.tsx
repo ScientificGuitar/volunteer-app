@@ -15,6 +15,15 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
 import { useOrg } from "@/hooks/useOrg"
 import { useEvent } from "@/hooks/useEvent"
 import { useDeleteSignup } from "@/hooks/useDeleteSignup"
@@ -25,6 +34,7 @@ export function EventDetail() {
   const { id } = useParams<{ id: string }>()
   const { org, loading: orgLoading, error: orgError } = useOrg()
   const { data: event, isLoading, error } = useEvent(org && id ? id : undefined)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const deleteSignup = useDeleteSignup()
   const api = useApi()
   const navigate = useNavigate()
@@ -105,9 +115,36 @@ export function EventDetail() {
           <Pencil className="mr-1 h-3 w-3" />
           Edit
         </Button>
-        <Button variant="destructive" size="sm" onClick={handleDeleteEvent}>
-          Delete Event
-        </Button>
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant="destructive" size="sm">
+              Delete Event
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete event?</DialogTitle>
+              <DialogDescription>
+                This will permanently delete &ldquo;{event.title}&rdquo; and all associated
+                signups. This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  setDeleteDialogOpen(false)
+                  handleDeleteEvent()
+                }}
+              >
+                Delete
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <InviteLinkSection eventId={event.id} />
@@ -300,14 +337,19 @@ function InviteLinkSection({ eventId }: InviteLinkSectionProps) {
 }
 
 async function copyToClipboard(text: string): Promise<void> {
-  try {
-    await navigator.clipboard.writeText(text)
-  } catch {
-    const input = document.createElement("input")
-    input.value = text
-    document.body.appendChild(input)
-    input.select()
-    document.execCommand("copy")
-    document.body.removeChild(input)
+  if (navigator.clipboard) {
+    try {
+      await navigator.clipboard.writeText(text)
+      return
+    } catch {
+      // fall through to execCommand fallback
+    }
   }
+  const input = document.createElement("input")
+  input.value = text
+  document.body.appendChild(input)
+  input.select()
+  const ok = document.execCommand("copy")
+  document.body.removeChild(input)
+  if (!ok) throw new Error("Clipboard copy failed")
 }

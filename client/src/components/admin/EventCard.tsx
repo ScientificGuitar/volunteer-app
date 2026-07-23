@@ -56,7 +56,10 @@ export function EventCard({ event, onDeleteSignup }: EventCardProps) {
                       variant="ghost"
                       size="icon"
                       className="h-4 w-4 text-muted-foreground hover:text-destructive"
-                      onClick={() => onDeleteSignup(s.id)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onDeleteSignup(s.id)
+                      }}
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>
