@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using RosterlyApi.Data;
 using RosterlyApi.Endpoints;
 using RosterlyApi.Validation;
 using Scalar.AspNetCore;

@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using RosterlyApi.Entities;
 
+namespace RosterlyApi.Data;
+
 public class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
@@ -19,6 +21,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
             entity.Property(e => e.ClerkUserId).HasMaxLength(100).IsRequired();
             entity.HasIndex(e => e.ClerkUserId);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
         });
 
         modelBuilder.Entity<Event>(entity =>
@@ -31,6 +34,7 @@ public class AppDbContext : DbContext
                 .HasForeignKey(e => e.OrganizationId)
                 .OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(e => new { e.OrganizationId, e.Date });
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
         });
 
         modelBuilder.Entity<TimeSlot>(entity =>
@@ -41,6 +45,7 @@ public class AppDbContext : DbContext
                 .WithMany(o => o.TimeSlots)
                 .HasForeignKey(s => s.EventId)
                 .OnDelete(DeleteBehavior.Cascade);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
         });
 
         modelBuilder.Entity<Signup>(entity =>
@@ -51,6 +56,7 @@ public class AppDbContext : DbContext
                 .WithMany(o => o.Signups)
                 .HasForeignKey(s => s.TimeSlotId)
                 .OnDelete(DeleteBehavior.Cascade);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
         });
 
         modelBuilder.Entity<InviteLink>(entity =>
@@ -63,6 +69,7 @@ public class AppDbContext : DbContext
                 .HasForeignKey(l => l.EventId)
                 .OnDelete(DeleteBehavior.SetNull);
             entity.HasIndex(e => e.EventId);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
         });
     }
 }

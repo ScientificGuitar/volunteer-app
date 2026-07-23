@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 using Microsoft.EntityFrameworkCore;
 
+using RosterlyApi.Data;
 using RosterlyApi.Entities;
 using RosterlyApi.Validation;
 

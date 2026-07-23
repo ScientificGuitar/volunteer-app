@@ -3,6 +3,7 @@ using System.Security.Claims;
 
 using Microsoft.EntityFrameworkCore;
 
+using RosterlyApi.Data;
 using RosterlyApi.Entities;
 using RosterlyApi.Validation;
 
