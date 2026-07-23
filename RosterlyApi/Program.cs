@@ -43,6 +43,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.Authority = clerkIssuer;
+        // NB: MapInboundClaims must stay false. Clerk's JWT uses "sub" as the user
+        // identifier, but the default JWT handler remaps "sub" to
+        // ClaimTypes.NameIdentifier. Setting this to true would silently break
+        // every FindFirst("sub") lookup in AdminEndpoints (line 93) and Program.cs
+        // (line 164), effectively bricking all authenticated endpoints.
         options.MapInboundClaims = false;
         options.TokenValidationParameters = new()
         {
@@ -83,7 +88,8 @@ builder.Services.AddCors(options =>
             )
             .AllowAnyHeader()
             .AllowAnyMethod()
-            .AllowCredentials();
+            .AllowCredentials()
+            .SetPreflightMaxAge(TimeSpan.FromMinutes(10));
     });
 });
 
@@ -183,4 +189,7 @@ app.Run();
 public record UserMeResponse(string UserId, UserMeOrganization? Organization);
 public record UserMeOrganization(Guid Id, string Name);
 
+// Required by WebApplicationFactory<Program> in the test project.
+// The partial class gives the compiler a hook to surface the
+// auto-generated entry-point class so integration tests can bootstrap it.
 public partial class Program { }

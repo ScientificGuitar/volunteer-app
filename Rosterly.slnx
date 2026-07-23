@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="RosterlyApi.Tests/RosterlyApi.Tests.csproj" />
+  <Project Path="RosterlyApi/RosterlyApi.csproj" />
+</Solution>
