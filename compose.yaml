@@ -2,6 +2,7 @@ services:
   db:
     image: postgres:17-alpine
     container_name: rosterly-db
+    restart: unless-stopped
     environment:
       POSTGRES_USER: rosterly
       POSTGRES_PASSWORD: rosterly
@@ -21,6 +22,7 @@ services:
       context: ./RosterlyApi
       dockerfile: Dockerfile
     container_name: rosterly-api
+    restart: unless-stopped
     ports:
       - "8080:8080"
     environment:
@@ -46,6 +48,7 @@ services:
       args:
         VITE_CLERK_PUBLISHABLE_KEY: "${VITE_CLERK_PUBLISHABLE_KEY}"
     container_name: rosterly-client
+    restart: unless-stopped
     ports:
       - "80:80"
     depends_on:
