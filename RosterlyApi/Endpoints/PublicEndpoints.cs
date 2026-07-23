@@ -17,11 +17,12 @@ public static class PublicEndpoints
         pub.MapGet("/{code}", GetInvitePage)
             .Produces<InvitePageResponse>()
             .Produces(404);
-        pub.MapPost("/{code}/signups", CreateSignup)
-            .Produces<PublicSignupResponse>(201)
-            .Produces(400)
-            .Produces(404)
-            .Produces(409);
+pub.MapPost("/{code}/signups", CreateSignup)
+    .RequireRateLimiting("signup")
+    .Produces<PublicSignupResponse>(201)
+    .Produces(400)
+    .Produces(404)
+    .Produces(409);
 
         return app;
     }

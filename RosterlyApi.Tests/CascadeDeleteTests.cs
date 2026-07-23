@@ -113,16 +113,9 @@ public class CascadeDeleteTests : IClassFixture<IntegrationTestFactory>
             slots = new[] { new { label = "Doomed Slot", startTime = "08:00", endTime = "09:00", capacity = 2 } }
         });
 
-        // Use raw DB to delete the organization (API doesn't expose org deletion yet)
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var org = await db.Organizations
-                .Include(o => o.Events).ThenInclude(e => e.TimeSlots)
-                .FirstAsync(o => o.Id == orgId);
-            db.Organizations.Remove(org);
-            await db.SaveChangesAsync();
-        }
+        // Delete the organization via API
+        var deleteOrgResp = await _client.DeleteAsync($"/api/organizations/{orgId}");
+        Assert.Equal(HttpStatusCode.NoContent, deleteOrgResp.StatusCode);
 
         // Verify cascade: nothing should remain
         using var checkScope = _factory.Services.CreateScope();

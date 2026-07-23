@@ -192,6 +192,14 @@ export function createAdminApi(getToken: () => Promise<string | null>) {
       })
       await checkVoid(res)
     },
+
+    deleteOrganization: async (orgId: string) => {
+      const res = await fetch(`${BASE}/organizations/${orgId}`, {
+        method: "DELETE",
+        headers: await h(),
+      })
+      await checkVoid(res)
+    },
   }
 }
 

@@ -23,6 +23,10 @@ public static class AdminEndpoints
             .Produces<OrganizationResponse>()
             .Produces(401)
             .Produces(404);
+        admin.MapDelete("/organizations/{id}", DeleteOrganization)
+            .Produces(204)
+            .Produces(401)
+            .Produces(404);
 
         admin.MapPost("/organizations/{orgId}/events", CreateEvent)
             .Produces<EventResponse>(201)
@@ -128,6 +132,18 @@ public static class AdminEndpoints
         if (org is null) return Results.NotFound();
 
         return Results.Ok(new OrganizationResponse(org.Id, org.Name, org.CreatedAt));
+    }
+
+    private static async Task<IResult> DeleteOrganization(Guid id, AppDbContext db, HttpContext http, CancellationToken ct)
+    {
+        var userId = GetUserId(http);
+        var org = await GetOwnedOrganization(db, id, userId, ct);
+        if (org is null) return Results.NotFound();
+
+        db.Organizations.Remove(org);
+        await db.SaveChangesAsync(ct);
+
+        return Results.NoContent();
     }
 
     // --- Events ---
