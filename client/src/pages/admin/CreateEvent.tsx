@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 import { Plus, X } from "lucide-react"
@@ -16,8 +16,6 @@ interface SlotRow {
   capacity: number
 }
 
-let nextKey = 1
-
 export function CreateEvent() {
   const { org, error: orgError } = useOrg()
   const api = useApi()
@@ -27,6 +25,7 @@ export function CreateEvent() {
   const [date, setDate] = useState("")
   const [slots, setSlots] = useState<SlotRow[]>([])
   const [submitting, setSubmitting] = useState(false)
+  const nextKey = useRef(0)
 
   if (orgError) {
     return (
@@ -49,7 +48,7 @@ export function CreateEvent() {
     setSlots((prev) => [
       ...prev,
       {
-        key: nextKey++,
+        key: nextKey.current++,
         label: "",
         startTime: "08:00",
         endTime: "09:00",
