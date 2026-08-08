@@ -126,6 +126,13 @@ export interface paths {
                         "application/json": components["schemas"]["OrganizationResponse"];
                     };
                 };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
                 /** @description Not Found */
                 404: {
                     headers: {
@@ -137,7 +144,40 @@ export interface paths {
         };
         put?: never;
         post?: never;
-        delete?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -172,6 +212,13 @@ export interface paths {
                     content: {
                         "application/json": components["schemas"]["EventWithSlotsResponse"][];
                     };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
                 };
                 /** @description Not Found */
                 404: {
@@ -209,6 +256,13 @@ export interface paths {
                 };
                 /** @description Bad Request */
                 400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -256,6 +310,13 @@ export interface paths {
                         "application/json": components["schemas"]["RosterEventResponse"];
                     };
                 };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
                 /** @description Not Found */
                 404: {
                     headers: {
@@ -296,6 +357,13 @@ export interface paths {
                     };
                     content?: never;
                 };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
                 /** @description Not Found */
                 404: {
                     headers: {
@@ -319,6 +387,13 @@ export interface paths {
             responses: {
                 /** @description No Content */
                 204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -373,6 +448,13 @@ export interface paths {
                 };
                 /** @description Bad Request */
                 400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -433,6 +515,13 @@ export interface paths {
                     };
                     content?: never;
                 };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
                 /** @description Not Found */
                 404: {
                     headers: {
@@ -457,6 +546,13 @@ export interface paths {
             responses: {
                 /** @description No Content */
                 204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -505,6 +601,13 @@ export interface paths {
                         "application/json": components["schemas"]["RosterEventResponse"][];
                     };
                 };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
                 /** @description Not Found */
                 404: {
                     headers: {
@@ -545,6 +648,13 @@ export interface paths {
             responses: {
                 /** @description No Content */
                 204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -591,6 +701,13 @@ export interface paths {
                         "application/json": components["schemas"]["InviteLinkResponse"][];
                     };
                 };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
                 /** @description Not Found */
                 404: {
                     headers: {
@@ -603,7 +720,9 @@ export interface paths {
         put?: never;
         post: {
             parameters: {
-                query?: never;
+                query?: {
+                    expiresAt?: string;
+                };
                 header?: never;
                 path: {
                     eventId: string;
@@ -620,6 +739,13 @@ export interface paths {
                     content: {
                         "application/json": components["schemas"]["InviteLinkResponse"];
                     };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
                 };
                 /** @description Not Found */
                 404: {
@@ -657,6 +783,13 @@ export interface paths {
             responses: {
                 /** @description No Content */
                 204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -850,6 +983,8 @@ export interface components {
             isActive: boolean;
             /** Format: date-time */
             createdAt: string;
+            /** Format: date-time */
+            expiresAt: null | string;
         };
         InvitePageResponse: {
             /** Format: uuid */

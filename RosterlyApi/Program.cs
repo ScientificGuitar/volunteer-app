@@ -41,6 +41,24 @@ foreach (var party in clerkAuthorizedParties)
     }
 }
 
+var corsOrigins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>()
+    ?? Array.Empty<string>();
+
+// When Cors:Origins comes from an env var it is a comma-separated string
+// (see compose.yaml Cors__Origins); Get<string[]>() silently yields an empty
+// array for such values, so fall back to parsing it explicitly.
+if (corsOrigins.Length == 0 && builder.Configuration["Cors:Origins"] is { Length: > 0 } rawOrigins)
+{
+    corsOrigins = rawOrigins
+        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Select(p => p.TrimEnd('/'))
+        .ToArray();
+}
+
+if (corsOrigins.Length == 0)
+    throw new InvalidOperationException(
+        "Cors:Origins must contain at least one origin. Set the CORS__ORIGINS environment variable (comma-separated) or the Cors:Origins setting in appsettings.json.");
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -95,11 +113,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins(
-                "http://localhost:5173",
-                "http://localhost:80",
-                "http://localhost"
-            )
+        policy.WithOrigins(corsOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials()

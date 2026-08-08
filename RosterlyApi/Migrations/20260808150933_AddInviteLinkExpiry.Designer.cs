@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using RosterlyApi.Data;
@@ -11,9 +12,11 @@ using RosterlyApi.Data;
 namespace RosterlyApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260808150933_AddInviteLinkExpiry")]
+    partial class AddInviteLinkExpiry
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -52,7 +55,7 @@ namespace RosterlyApi.Migrations
 
                     b.HasIndex("OrganizationId", "Date");
 
-                    b.ToTable("Events", (string)null);
+                    b.ToTable("Events");
                 });
 
             modelBuilder.Entity("RosterlyApi.Entities.InviteLink", b =>
@@ -87,7 +90,7 @@ namespace RosterlyApi.Migrations
 
                     b.HasIndex("EventId");
 
-                    b.ToTable("InviteLinks", (string)null);
+                    b.ToTable("InviteLinks");
                 });
 
             modelBuilder.Entity("RosterlyApi.Entities.Organization", b =>
@@ -115,7 +118,7 @@ namespace RosterlyApi.Migrations
 
                     b.HasIndex("ClerkUserId");
 
-                    b.ToTable("Organizations", (string)null);
+                    b.ToTable("Organizations");
                 });
 
             modelBuilder.Entity("RosterlyApi.Entities.Signup", b =>
@@ -141,7 +144,7 @@ namespace RosterlyApi.Migrations
 
                     b.HasIndex("TimeSlotId");
 
-                    b.ToTable("Signups", (string)null);
+                    b.ToTable("Signups");
                 });
 
             modelBuilder.Entity("RosterlyApi.Entities.TimeSlot", b =>
@@ -176,7 +179,7 @@ namespace RosterlyApi.Migrations
 
                     b.HasIndex("EventId");
 
-                    b.ToTable("TimeSlots", (string)null);
+                    b.ToTable("TimeSlots");
                 });
 
             modelBuilder.Entity("RosterlyApi.Entities.Event", b =>

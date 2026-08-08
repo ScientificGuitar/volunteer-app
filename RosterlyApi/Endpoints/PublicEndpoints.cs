@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 using RosterlyApi.Data;
 using RosterlyApi.Entities;
@@ -17,12 +18,12 @@ public static class PublicEndpoints
         pub.MapGet("/{code}", GetInvitePage)
             .Produces<InvitePageResponse>()
             .Produces(404);
-pub.MapPost("/{code}/signups", CreateSignup)
-    .RequireRateLimiting("signup")
-    .Produces<PublicSignupResponse>(201)
-    .Produces(400)
-    .Produces(404)
-    .Produces(409);
+        pub.MapPost("/{code}/signups", CreateSignup)
+            .RequireRateLimiting("signup")
+            .Produces<PublicSignupResponse>(201)
+            .Produces(400)
+            .Produces(404)
+            .Produces(409);
 
         return app;
     }
@@ -30,18 +31,18 @@ pub.MapPost("/{code}/signups", CreateSignup)
     private static async Task<IResult> GetInvitePage(string code, AppDbContext db, CancellationToken ct)
     {
         var link = await db.InviteLinks
-            .FirstOrDefaultAsync(l => l.Code == code && l.IsActive, ct);
+            .Include(l => l.Event!)
+                .ThenInclude(e => e.Organization)
+            .Include(l => l.Event!)
+                .ThenInclude(e => e.TimeSlots)
+                    .ThenInclude(s => s.Signups)
+            .FirstOrDefaultAsync(l => l.Code == code && l.IsActive
+                && (!l.ExpiresAt.HasValue || l.ExpiresAt.Value > DateTime.UtcNow), ct);
 
-        if (link is null || link.EventId is null)
+        if (link is null || link.Event is null)
             return Results.NotFound(new { error = "Invite link not found or expired" });
 
-        var evt = await db.Events
-            .Include(e => e.Organization)
-            .Include(e => e.TimeSlots).ThenInclude(s => s.Signups)
-            .FirstOrDefaultAsync(e => e.Id == link.EventId, ct);
-
-        if (evt is null)
-            return Results.NotFound(new { error = "Invite link not found or expired" });
+        var evt = link.Event;
 
         return Results.Ok(new InvitePageResponse(
             evt.OrganizationId,
@@ -63,7 +64,8 @@ pub.MapPost("/{code}/signups", CreateSignup)
     private static async Task<IResult> CreateSignup(string code, PublicSignupRequest request, AppDbContext db, HttpContext http, CancellationToken ct)
     {
         var link = await db.InviteLinks
-            .FirstOrDefaultAsync(l => l.Code == code && l.IsActive, ct);
+            .FirstOrDefaultAsync(l => l.Code == code && l.IsActive
+                && (!l.ExpiresAt.HasValue || l.ExpiresAt.Value > DateTime.UtcNow), ct);
 
         if (link is null || link.EventId is null)
             return Results.NotFound(new { error = "Invite link not found or expired" });
@@ -74,18 +76,50 @@ pub.MapPost("/{code}/signups", CreateSignup)
         {
             using var tx = await db.Database.BeginTransactionAsync(ct);
 
-            var slot = await db.TimeSlots
-                .FromSqlRaw(
-                    "SELECT * FROM \"TimeSlots\" WHERE \"Id\" = {0} AND \"EventId\" = {1} FOR UPDATE",
-                    request.SlotId, link.EventId)
-                .FirstOrDefaultAsync(ct);
+            var conn = db.Database.GetDbConnection();
+            if (conn.State != System.Data.ConnectionState.Open)
+                await conn.OpenAsync(ct);
 
-            if (slot is null)
+            var dbTx = db.Database.CurrentTransaction?.GetDbTransaction();
+
+            await using var lockCmd = conn.CreateCommand();
+            if (dbTx is not null) lockCmd.Transaction = dbTx;
+            lockCmd.CommandText = """
+                SELECT pg_advisory_xact_lock(
+                    ('x' || left(replace(@slotId::text, '-', ''), 16))::bit(64)::bigint
+                )
+                """;
+            var lockSlotParam = lockCmd.CreateParameter();
+            lockSlotParam.ParameterName = "slotId";
+            lockSlotParam.Value = request.SlotId;
+            lockCmd.Parameters.Add(lockSlotParam);
+            await lockCmd.ExecuteScalarAsync(ct);
+
+            await using var cmd = conn.CreateCommand();
+            if (dbTx is not null) cmd.Transaction = dbTx;
+            cmd.CommandText = """
+                SELECT t."Capacity",
+                       (SELECT COUNT(*) FROM "Signups" WHERE "TimeSlotId" = t."Id") AS cnt
+                FROM "TimeSlots" t
+                WHERE t."Id" = @slotId AND t."EventId" = @eventId
+                """;
+            var slotParam = cmd.CreateParameter();
+            slotParam.ParameterName = "slotId";
+            slotParam.Value = request.SlotId;
+            var eventParam = cmd.CreateParameter();
+            eventParam.ParameterName = "eventId";
+            eventParam.Value = link.EventId;
+            cmd.Parameters.Add(slotParam);
+            cmd.Parameters.Add(eventParam);
+
+            await using var reader = await cmd.ExecuteReaderAsync(ct);
+            if (!await reader.ReadAsync(ct))
                 return Results.NotFound(new { error = "Time slot not found" });
 
-            var signupCount = await db.Signups.CountAsync(s => s.TimeSlotId == request.SlotId, ct);
+            var capacity = reader.GetInt32(0);
+            var signupCount = reader.GetInt64(1);
 
-            if (signupCount >= slot.Capacity)
+            if (signupCount >= capacity)
                 return Results.Conflict(new { error = "This time slot is full" });
 
             var signup = new Signup

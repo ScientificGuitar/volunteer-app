@@ -387,7 +387,7 @@ public static class AdminEndpoints
 
     // --- Invite Links ---
 
-    private static async Task<IResult> CreateInviteLink(Guid eventId, AppDbContext db, HttpContext http, CancellationToken ct)
+    private static async Task<IResult> CreateInviteLink(Guid eventId, DateTime? expiresAt, AppDbContext db, HttpContext http, CancellationToken ct)
     {
         var userId = GetUserId(http);
         var evt = await db.Events
@@ -402,13 +402,14 @@ public static class AdminEndpoints
             EventId = eventId,
             Code = GenerateInviteCode(),
             IsActive = true,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            ExpiresAt = expiresAt ?? DateTime.UtcNow.AddDays(7)
         };
 
         db.InviteLinks.Add(link);
         await db.SaveChangesAsync(ct);
 
-        return Results.Ok(new InviteLinkResponse(link.Id, link.EventId, link.Code, link.IsActive, link.CreatedAt));
+        return Results.Ok(new InviteLinkResponse(link.Id, link.EventId, link.Code, link.IsActive, link.CreatedAt, link.ExpiresAt));
     }
 
     private static async Task<IResult> ListInviteLinks(Guid eventId, AppDbContext db, HttpContext http, CancellationToken ct)
@@ -425,7 +426,7 @@ public static class AdminEndpoints
             .OrderByDescending(l => l.CreatedAt)
             .ToListAsync(ct);
 
-        return Results.Ok(links.Select(l => new InviteLinkResponse(l.Id, l.EventId, l.Code, l.IsActive, l.CreatedAt)));
+        return Results.Ok(links.Select(l => new InviteLinkResponse(l.Id, l.EventId, l.Code, l.IsActive, l.CreatedAt, l.ExpiresAt)));
     }
 
     private static async Task<IResult> RevokeInviteLink(Guid id, AppDbContext db, HttpContext http, CancellationToken ct)
@@ -519,7 +520,7 @@ public record UpdateSlotRequest(
 
 public record OrganizationResponse(Guid Id, string Name, DateTime CreatedAt);
 
-public record InviteLinkResponse(Guid Id, Guid? EventId, string Code, bool IsActive, DateTime CreatedAt);
+public record InviteLinkResponse(Guid Id, Guid? EventId, string Code, bool IsActive, DateTime CreatedAt, DateTime? ExpiresAt);
 
 public record EventResponse(Guid Id, Guid OrganizationId, string Title, string? Description, DateOnly Date, DateTime CreatedAt);
 
