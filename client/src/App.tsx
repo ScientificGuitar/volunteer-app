@@ -18,6 +18,7 @@ import { EventDetail } from "@/pages/admin/EventDetail"
 import { EditEvent } from "@/pages/admin/EditEvent"
 import { InvitePage } from "@/pages/public/InvitePage"
 import { cn } from "@/lib/utils"
+import { useOrg } from "@/hooks/useOrg"
 
 function EditEventWrapper() {
   const { id } = useParams()
@@ -33,6 +34,7 @@ function Header() {
   const { openSignIn, openSignUp, signOut } = useClerk()
   const { theme, setTheme } = useTheme()
   const location = useLocation()
+  const { org } = useOrg()
 
   return (
     <header className="flex items-center justify-between border-b px-6 py-3">
@@ -42,25 +44,27 @@ function Header() {
         </Link>
         <Show when="signed-in">
           <nav className="flex items-center gap-1">
-            {navItems.map((item) => {
-              const Icon = item.icon
-              const isActive = location.pathname === item.to
-              return (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors",
-                    isActive
-                      ? "bg-primary/10 font-medium text-primary"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
-              )
-            })}
+            {navItems
+              .filter((item) => item.to !== "/events/new" || org)
+              .map((item) => {
+                const Icon = item.icon
+                const isActive = location.pathname === item.to
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors",
+                      isActive
+                        ? "bg-primary/10 font-medium text-primary"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                  </Link>
+                )
+              })}
           </nav>
         </Show>
       </div>
@@ -90,11 +94,17 @@ function Header() {
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            onClick={() => openSignIn({ fallbackRedirectUrl: window.location.pathname })}
+            onClick={() =>
+              openSignIn({ fallbackRedirectUrl: window.location.pathname })
+            }
           >
             Sign in
           </Button>
-          <Button onClick={() => openSignUp({ fallbackRedirectUrl: window.location.pathname })}>
+          <Button
+            onClick={() =>
+              openSignUp({ fallbackRedirectUrl: window.location.pathname })
+            }
+          >
             Sign up
           </Button>
         </div>
