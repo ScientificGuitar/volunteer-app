@@ -112,12 +112,16 @@ public static class PublicEndpoints
             cmd.Parameters.Add(slotParam);
             cmd.Parameters.Add(eventParam);
 
-            await using var reader = await cmd.ExecuteReaderAsync(ct);
-            if (!await reader.ReadAsync(ct))
-                return Results.NotFound(new { error = "Time slot not found" });
+            int capacity;
+            long signupCount;
+            await using (var reader = await cmd.ExecuteReaderAsync(ct))
+            {
+                if (!await reader.ReadAsync(ct))
+                    return Results.NotFound(new { error = "Time slot not found" });
 
-            var capacity = reader.GetInt32(0);
-            var signupCount = reader.GetInt64(1);
+                capacity = reader.GetInt32(0);
+                signupCount = reader.GetInt64(1);
+            }
 
             if (signupCount >= capacity)
                 return Results.Conflict(new { error = "This time slot is full" });
