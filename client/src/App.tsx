@@ -1,10 +1,11 @@
 import { Toaster } from "sonner"
-import { Show, UserButton, useClerk } from "@clerk/react"
+import { Show, UserButton, useAuth, useClerk } from "@clerk/react"
 import { Moon, Sun, LayoutDashboard, CalendarPlus } from "lucide-react"
 import {
   Routes,
   Route,
   Navigate,
+  Outlet,
   Link,
   useLocation,
   useParams,
@@ -126,6 +127,24 @@ function WelcomeScreen() {
   )
 }
 
+function RequireAuth() {
+  const { isLoaded, isSignedIn } = useAuth()
+
+  if (!isLoaded) return null
+  if (!isSignedIn) return <Navigate to="/" replace />
+
+  return <Outlet />
+}
+
+function HomeRoute() {
+  const { isLoaded, isSignedIn } = useAuth()
+
+  if (!isLoaded) return null
+  if (isSignedIn) return <Navigate to="/dashboard" replace />
+
+  return <WelcomeScreen />
+}
+
 export function App() {
   return (
     <div className="flex min-h-svh flex-col">
@@ -134,22 +153,15 @@ export function App() {
       <main className="flex-1 p-6">
         <Routes>
           <Route path="/invite/:code" element={<InvitePage />} />
-        </Routes>
-        <Show when="signed-in">
-          <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<HomeRoute />} />
+          <Route element={<RequireAuth />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/events/new" element={<CreateEvent />} />
             <Route path="/events/:id" element={<EventDetail />} />
             <Route path="/events/:id/edit" element={<EditEventWrapper />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
-        </Show>
-        <Show when="signed-out">
-          <Routes>
-            <Route path="*" element={<WelcomeScreen />} />
-          </Routes>
-        </Show>
+          </Route>
+          <Route path="*" element={<HomeRoute />} />
+        </Routes>
       </main>
     </div>
   )
