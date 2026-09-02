@@ -1026,9 +1026,9 @@ export interface components {
             /** Format: uuid */
             id: string;
             label: string;
-            /** Format: time */
+            /** Format: date-time */
             startTime: string;
-            /** Format: time */
+            /** Format: date-time */
             endTime: string;
             /** Format: int32 */
             capacity: number | string;
@@ -1047,9 +1047,9 @@ export interface components {
             /** Format: uuid */
             id: string;
             label: string;
-            /** Format: time */
+            /** Format: date-time */
             startTime: string;
-            /** Format: time */
+            /** Format: date-time */
             endTime: string;
             /** Format: int32 */
             capacity: number | string;
@@ -1063,9 +1063,9 @@ export interface components {
             /** Format: uuid */
             eventId: string;
             label: string;
-            /** Format: time */
+            /** Format: date-time */
             startTime: string;
-            /** Format: time */
+            /** Format: date-time */
             endTime: string;
             /** Format: int32 */
             capacity: number | string;

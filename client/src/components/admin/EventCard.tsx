@@ -3,6 +3,7 @@ import { Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { formatTime } from "@/lib/utils"
 import type { RosterEvent } from "@/lib/types"
 
 interface EventCardProps {
@@ -30,7 +31,7 @@ export function EventCard({ event, onDeleteSignup }: EventCardProps) {
               <span className="font-medium">
                 {slot.label}
                 <span className="ml-1 text-muted-foreground">
-                  ({slot.startTime}–{slot.endTime})
+                  ({formatTime(slot.startTime)}–{formatTime(slot.endTime)})
                 </span>
               </span>
               <Badge

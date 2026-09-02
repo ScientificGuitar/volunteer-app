@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { createPublicApi } from "@/lib/api"
+import { formatTime } from "@/lib/utils"
 import type { PublicSlot } from "@/lib/types"
 
 const api = createPublicApi()
@@ -137,7 +138,7 @@ function SlotCard({ slot, onSignUp }: SlotCardProps) {
           <span>
             {slot.label}
             <span className="ml-2 font-normal text-muted-foreground">
-              {slot.startTime}&ndash;{slot.endTime}
+              {formatTime(slot.startTime)}&ndash;{formatTime(slot.endTime)}
             </span>
           </span>
           <Badge variant={slot.isFull ? "destructive" : "secondary"}>

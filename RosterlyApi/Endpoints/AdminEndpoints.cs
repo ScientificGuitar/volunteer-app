@@ -205,7 +205,7 @@ public static class AdminEndpoints
 
         return Results.Ok(events.Select(e => new EventWithSlotsResponse(
             e.Id, e.OrganizationId, e.Title, e.Description, e.Date, e.CreatedAt,
-            e.TimeSlots.Select(s => new TimeSlotResponse(s.Id, s.EventId, s.Label, s.StartTime, s.EndTime, s.Capacity, s.Signups.Count))
+            e.TimeSlots.Select(s => new TimeSlotResponse(s.Id, s.EventId, s.Label, e.Date.ToDateTime(s.StartTime), e.Date.ToDateTime(s.EndTime), s.Capacity, s.Signups.Count))
         )));
     }
 
@@ -267,7 +267,7 @@ public static class AdminEndpoints
         db.TimeSlots.Add(slot);
         await db.SaveChangesAsync(ct);
 
-        return Results.Created($"/api/events/{eventId}/slots/{slot.Id}", new TimeSlotResponse(slot.Id, slot.EventId, slot.Label, slot.StartTime, slot.EndTime, slot.Capacity, 0));
+        return Results.Created($"/api/events/{eventId}/slots/{slot.Id}", new TimeSlotResponse(slot.Id, slot.EventId, slot.Label, evt.Date.ToDateTime(slot.StartTime), evt.Date.ToDateTime(slot.EndTime), slot.Capacity, 0));
     }
 
     private static async Task<IResult> UpdateSlot(Guid eventId, Guid slotId, UpdateSlotRequest request, AppDbContext db, HttpContext http, CancellationToken ct)
@@ -304,7 +304,7 @@ public static class AdminEndpoints
 
         await db.SaveChangesAsync(ct);
 
-        return Results.Ok(new TimeSlotResponse(slot.Id, slot.EventId, slot.Label, slot.StartTime, slot.EndTime, slot.Capacity, signupCount));
+        return Results.Ok(new TimeSlotResponse(slot.Id, slot.EventId, slot.Label, slot.Event.Date.ToDateTime(slot.StartTime), slot.Event.Date.ToDateTime(slot.EndTime), slot.Capacity, signupCount));
     }
 
     private static async Task<IResult> DeleteSlot(Guid eventId, Guid slotId, AppDbContext db, HttpContext http, CancellationToken ct)
@@ -341,7 +341,7 @@ public static class AdminEndpoints
         return Results.Ok(events.Select(e => new RosterEventResponse(
             e.Id, e.Title, e.Description, e.Date,
             e.TimeSlots.Select(s => new RosterSlotResponse(
-                s.Id, s.Label, s.StartTime, s.EndTime, s.Capacity,
+                s.Id, s.Label, e.Date.ToDateTime(s.StartTime), e.Date.ToDateTime(s.EndTime), s.Capacity,
                 s.Signups.Select(su => new SignupResponse(su.Id, su.TimeSlotId, su.VolunteerName, su.CreatedAt))
             ))
         )));
@@ -379,7 +379,7 @@ public static class AdminEndpoints
         return Results.Ok(new RosterEventResponse(
             evt.Id, evt.Title, evt.Description, evt.Date,
             evt.TimeSlots.Select(s => new RosterSlotResponse(
-                s.Id, s.Label, s.StartTime, s.EndTime, s.Capacity,
+                s.Id, s.Label, evt.Date.ToDateTime(s.StartTime), evt.Date.ToDateTime(s.EndTime), s.Capacity,
                 s.Signups.Select(su => new SignupResponse(su.Id, su.TimeSlotId, su.VolunteerName, su.CreatedAt))
             ))
         ));
@@ -526,10 +526,10 @@ public record EventResponse(Guid Id, Guid OrganizationId, string Title, string? 
 
 public record EventWithSlotsResponse(Guid Id, Guid OrganizationId, string Title, string? Description, DateOnly Date, DateTime CreatedAt, IEnumerable<TimeSlotResponse> Slots);
 
-public record TimeSlotResponse(Guid Id, Guid EventId, string Label, TimeOnly StartTime, TimeOnly EndTime, int Capacity, int SignupCount);
+public record TimeSlotResponse(Guid Id, Guid EventId, string Label, DateTime StartTime, DateTime EndTime, int Capacity, int SignupCount);
 
 public record RosterEventResponse(Guid Id, string Title, string? Description, DateOnly Date, IEnumerable<RosterSlotResponse> Slots);
 
-public record RosterSlotResponse(Guid Id, string Label, TimeOnly StartTime, TimeOnly EndTime, int Capacity, IEnumerable<SignupResponse> Signups);
+public record RosterSlotResponse(Guid Id, string Label, DateTime StartTime, DateTime EndTime, int Capacity, IEnumerable<SignupResponse> Signups);
 
 public record SignupResponse(Guid Id, Guid TimeSlotId, string VolunteerName, DateTime CreatedAt);

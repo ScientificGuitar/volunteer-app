@@ -13,6 +13,7 @@ import {
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { formatTime } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -162,7 +163,7 @@ export function EventDetail() {
                 <span>
                   {slot.label}
                   <span className="ml-2 font-normal text-muted-foreground">
-                    {slot.startTime}&ndash;{slot.endTime}
+                    {formatTime(slot.startTime)}&ndash;{formatTime(slot.endTime)}
                   </span>
                 </span>
                 <Badge

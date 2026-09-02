@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { useEvent } from "@/hooks/useEvent"
 import { useApi } from "@/hooks/useApi"
+import { formatTime, toTimeInputValue } from "@/lib/utils"
 import type { RosterEvent, RosterSlot } from "@/lib/types"
 
 interface SlotFormData {
@@ -166,8 +167,8 @@ function EventForm({ event, eventId }: EventFormProps) {
     setEditingSlotId(slot.id)
     setSlotForm({
       label: slot.label,
-      startTime: slot.startTime.slice(0, 5),
-      endTime: slot.endTime.slice(0, 5),
+      startTime: toTimeInputValue(slot.startTime),
+      endTime: toTimeInputValue(slot.endTime),
       capacity: slot.capacity,
     })
     setShowAddSlot(false)
@@ -278,8 +279,8 @@ function EventForm({ event, eventId }: EventFormProps) {
                   <div>
                     <span className="font-medium">{slot.label}</span>
                     <span className="ml-2 text-sm text-muted-foreground">
-                      {slot.startTime.slice(0, 5)}&ndash;
-                      {slot.endTime.slice(0, 5)}
+                      {formatTime(slot.startTime)}&ndash;
+                      {formatTime(slot.endTime)}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">

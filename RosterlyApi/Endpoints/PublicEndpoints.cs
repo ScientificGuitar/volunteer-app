@@ -55,7 +55,7 @@ public static class PublicEndpoints
                 evt.TimeSlots
                     .OrderBy(s => s.StartTime)
                     .Select(s => new SlotAvailabilityResponse(
-                        s.Id, s.Label, s.StartTime, s.EndTime, s.Capacity, s.Signups.Count, s.Signups.Count >= s.Capacity
+                        s.Id, s.Label, evt.Date.ToDateTime(s.StartTime), evt.Date.ToDateTime(s.EndTime), s.Capacity, s.Signups.Count, s.Signups.Count >= s.Capacity
                     ))
             )
         ));
@@ -169,6 +169,6 @@ public record InvitePageResponse(Guid OrganizationId, string OrganizationName, E
 
 public record EventPublicResponse(Guid Id, string Title, string? Description, DateOnly Date, IEnumerable<SlotAvailabilityResponse> Slots);
 
-public record SlotAvailabilityResponse(Guid Id, string Label, TimeOnly StartTime, TimeOnly EndTime, int Capacity, int SignupCount, bool IsFull);
+public record SlotAvailabilityResponse(Guid Id, string Label, DateTime StartTime, DateTime EndTime, int Capacity, int SignupCount, bool IsFull);
 
 public record PublicSignupResponse(Guid Id, Guid SlotId, string VolunteerName, DateTime CreatedAt);
