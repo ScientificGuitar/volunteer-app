@@ -1,4 +1,5 @@
 using System.Threading.RateLimiting;
+using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
@@ -11,6 +12,11 @@ using RosterlyApi.Endpoints;
 using RosterlyApi.Services;
 using RosterlyApi.Validation;
 using Scalar.AspNetCore;
+
+if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), ".env")))
+    Env.Load();
+else if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "..", ".env")))
+    Env.Load(Path.Combine("..", ".env"));
 
 var builder = WebApplication.CreateBuilder(args);
 
