@@ -205,7 +205,7 @@ public static class AdminEndpoints
 
         return Results.Ok(events.Select(e => new EventWithSlotsResponse(
             e.Id, e.OrganizationId, e.Title, e.Description, e.Date, e.CreatedAt,
-            e.TimeSlots.Select(s => new TimeSlotResponse(s.Id, s.EventId, s.Label, e.Date.ToDateTime(s.StartTime), e.Date.ToDateTime(s.EndTime), s.Capacity, s.Signups.Count))
+            e.TimeSlots.Select(s => new TimeSlotResponse(s.Id, s.EventId, s.Label, e.Date.ToDateTime(s.StartTime), e.Date.ToDateTime(s.EndTime), s.Capacity, s.Signups.Count(sg => sg.Status != SignupStatus.Cancelled)))
         )));
     }
 
@@ -279,7 +279,7 @@ public static class AdminEndpoints
 
         if (slot is null) return Results.NotFound();
 
-        var signupCount = await db.Signups.CountAsync(s => s.TimeSlotId == slotId, ct);
+        var signupCount = await db.Signups.CountAsync(s => s.TimeSlotId == slotId && s.Status != SignupStatus.Cancelled, ct);
 
         if (request.Capacity is not null && request.Capacity.Value < signupCount)
         {
@@ -342,7 +342,7 @@ public static class AdminEndpoints
             e.Id, e.Title, e.Description, e.Date,
             e.TimeSlots.Select(s => new RosterSlotResponse(
                 s.Id, s.Label, e.Date.ToDateTime(s.StartTime), e.Date.ToDateTime(s.EndTime), s.Capacity,
-                s.Signups.Select(su => new SignupResponse(su.Id, su.TimeSlotId, su.VolunteerName, su.CreatedAt))
+                s.Signups.Select(su => new SignupResponse(su.Id, su.TimeSlotId, su.VolunteerName, su.Email, su.Status.ToString(), su.CreatedAt))
             ))
         )));
     }
@@ -380,7 +380,7 @@ public static class AdminEndpoints
             evt.Id, evt.Title, evt.Description, evt.Date,
             evt.TimeSlots.Select(s => new RosterSlotResponse(
                 s.Id, s.Label, evt.Date.ToDateTime(s.StartTime), evt.Date.ToDateTime(s.EndTime), s.Capacity,
-                s.Signups.Select(su => new SignupResponse(su.Id, su.TimeSlotId, su.VolunteerName, su.CreatedAt))
+                s.Signups.Select(su => new SignupResponse(su.Id, su.TimeSlotId, su.VolunteerName, su.Email, su.Status.ToString(), su.CreatedAt))
             ))
         ));
     }
@@ -532,4 +532,4 @@ public record RosterEventResponse(Guid Id, string Title, string? Description, Da
 
 public record RosterSlotResponse(Guid Id, string Label, DateTime StartTime, DateTime EndTime, int Capacity, IEnumerable<SignupResponse> Signups);
 
-public record SignupResponse(Guid Id, Guid TimeSlotId, string VolunteerName, DateTime CreatedAt);
+public record SignupResponse(Guid Id, Guid TimeSlotId, string VolunteerName, string Email, string Status, DateTime CreatedAt);

@@ -1,8 +1,13 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import type { SignupInfo } from "@/lib/types"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
+}
+
+export function activeSignupCount(signups: SignupInfo[]): number {
+  return signups.filter((s) => s.status !== "Cancelled").length
 }
 
 export function formatTime(iso: string): string {

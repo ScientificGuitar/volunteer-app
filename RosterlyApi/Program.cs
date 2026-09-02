@@ -5,8 +5,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Resend;
 using RosterlyApi.Data;
 using RosterlyApi.Endpoints;
+using RosterlyApi.Services;
 using RosterlyApi.Validation;
 using Scalar.AspNetCore;
 
@@ -17,6 +19,16 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         builder.Configuration.GetConnectionString("DefaultConnection"),
         npgsql => npgsql.EnableRetryOnFailure()
     ));
+
+builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("Email"));
+builder.Services.AddResend(options =>
+{
+    options.ApiToken = builder.Configuration["Resend:ApiKey"] ?? string.Empty;
+    options.ThrowExceptions = true;
+});
+builder.Services.AddScoped<IEmailSender, ResendEmailSender>();
+builder.Services.AddScoped<EmailOutboxService>();
+builder.Services.AddHostedService<EmailBackgroundService>();
 
 var clerkIssuer = builder.Configuration["Clerk:Issuer"]
     ?? throw new InvalidOperationException("Clerk:Issuer is not configured");

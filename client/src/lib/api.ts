@@ -7,21 +7,25 @@ import type {
   UpdateSlotRequest,
   TimeSlotResponse,
   UserMeResponse,
+  SignupManageData,
 } from "@/lib/types"
 
 const BASE = "/api"
 
 export class ApiError extends Error {
   status: number
+  code?: string
   fields?: Record<string, string[]>
   constructor(
     status: number,
     message: string,
-    fields?: Record<string, string[]>
+    fields?: Record<string, string[]>,
+    code?: string
   ) {
     super(message)
     this.status = status
     this.fields = fields
+    this.code = code
   }
 }
 
@@ -36,6 +40,7 @@ async function authHeaders(getToken: () => Promise<string | null>) {
 function parseErrorBody(body: unknown): {
   message: string
   fields?: Record<string, string[]>
+  code?: string
 } {
   if (!body || typeof body !== "object") return { message: "" }
   const b = body as Record<string, unknown>
@@ -48,14 +53,15 @@ function parseErrorBody(body: unknown): {
     (typeof b.error === "string" && b.error) ||
     (typeof b.detail === "string" && b.detail) ||
     ""
-  return { message, fields }
+  const code = typeof b.code === "string" ? b.code : undefined
+  return { message, fields, code }
 }
 
 async function checkJson<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    const { message, fields } = parseErrorBody(body)
-    throw new ApiError(res.status, message || res.statusText, fields)
+    const { message, fields, code } = parseErrorBody(body)
+    throw new ApiError(res.status, message || res.statusText, fields, code)
   }
   return res.json()
 }
@@ -63,8 +69,8 @@ async function checkJson<T>(res: Response): Promise<T> {
 async function checkVoid(res: Response): Promise<void> {
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    const { message, fields } = parseErrorBody(body)
-    throw new ApiError(res.status, message || res.statusText, fields)
+    const { message, fields, code } = parseErrorBody(body)
+    throw new ApiError(res.status, message || res.statusText, fields, code)
   }
 }
 
@@ -213,7 +219,7 @@ export function createPublicApi() {
 
     createSignup: async (
       code: string,
-      data: { slotId: string; volunteerName: string }
+      data: { slotId: string; volunteerName: string; email: string }
     ) => {
       const res = await fetch(`${BASE}/invite/${code}/signups`, {
         method: "POST",
@@ -224,8 +230,33 @@ export function createPublicApi() {
         id: string
         slotId: string
         volunteerName: string
+        email: string
         createdAt: string
       }>(res)
+    },
+
+    resendSignup: async (
+      code: string,
+      data: { slotId: string; email: string }
+    ) => {
+      const res = await fetch(`${BASE}/invite/${code}/signups/resend`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      })
+      await checkVoid(res)
+    },
+
+    getSignupDetails: async (token: string) => {
+      const res = await fetch(`${BASE}/signup/manage/${token}`)
+      return checkJson<SignupManageData>(res)
+    },
+
+    cancelSignup: async (token: string) => {
+      const res = await fetch(`${BASE}/signup/manage/${token}/cancel`, {
+        method: "POST",
+      })
+      await checkVoid(res)
     },
   }
 }

@@ -312,7 +312,8 @@ public class ValidationTests : IClassFixture<IntegrationTestFactory>
         var response = await _public.PostAsJsonAsync($"/api/invite/{code}/signups", new
         {
             slotId,
-            volunteerName = ""
+            volunteerName = "",
+            email = "alice@example.com"
         });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -327,7 +328,8 @@ public class ValidationTests : IClassFixture<IntegrationTestFactory>
         var response = await _public.PostAsJsonAsync($"/api/invite/{code}/signups", new
         {
             slotId = Guid.Empty,
-            volunteerName = "Alice"
+            volunteerName = "Alice",
+            email = "alice@example.com"
         });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -346,7 +348,8 @@ public class ValidationTests : IClassFixture<IntegrationTestFactory>
         var response = await _public.PostAsJsonAsync($"/api/invite/{code}/signups", new
         {
             slotId,
-            volunteerName = new string('a', 201)
+            volunteerName = new string('a', 201),
+            email = "alice@example.com"
         });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -365,7 +368,8 @@ public class ValidationTests : IClassFixture<IntegrationTestFactory>
         var response = await _public.PostAsJsonAsync($"/api/invite/{code}/signups", new
         {
             slotId,
-            volunteerName = "   "
+            volunteerName = "   ",
+            email = "alice@example.com"
         });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);

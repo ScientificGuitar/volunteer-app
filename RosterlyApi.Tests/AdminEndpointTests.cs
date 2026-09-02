@@ -262,7 +262,7 @@ public class AdminEndpointTests : IClassFixture<IntegrationTestFactory>
         var code = link.GetProperty("code").GetString()!;
 
         var signupResp = await _client.PostAsJsonAsync($"/api/invite/{code}/signups",
-            new { slotId, volunteerName = "Jane" });
+            new { slotId, volunteerName = "Jane", email = "jane@example.com" });
         var signup = await signupResp.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
         var signupId = signup.GetProperty("id").GetGuid();
 

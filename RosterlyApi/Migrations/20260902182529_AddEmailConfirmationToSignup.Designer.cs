@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using RosterlyApi.Data;
@@ -11,9 +12,11 @@ using RosterlyApi.Data;
 namespace RosterlyApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260902182529_AddEmailConfirmationToSignup")]
+    partial class AddEmailConfirmationToSignup
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -202,10 +205,6 @@ namespace RosterlyApi.Migrations
                         .IsUnique();
 
                     b.HasIndex("TimeSlotId");
-
-                    b.HasIndex("Email", "TimeSlotId")
-                        .IsUnique()
-                        .HasFilter("\"Status\" <> 'Cancelled'");
 
                     b.ToTable("Signups");
                 });

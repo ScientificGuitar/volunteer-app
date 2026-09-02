@@ -12,6 +12,7 @@ public class AppDbContext : DbContext
     public DbSet<TimeSlot> TimeSlots => Set<TimeSlot>();
     public DbSet<Signup> Signups => Set<Signup>();
     public DbSet<InviteLink> InviteLinks => Set<InviteLink>();
+    public DbSet<EmailMessage> EmailMessages => Set<EmailMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -52,10 +53,27 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.VolunteerName).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.Email).HasMaxLength(320).IsRequired();
+            entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+            entity.Property(e => e.ManagementTokenHash).HasMaxLength(64).IsRequired();
+            entity.HasIndex(e => e.ManagementTokenHash).IsUnique();
+            entity.HasIndex(e => new { e.Email, e.TimeSlotId })
+                .IsUnique()
+                .HasFilter("\"Status\" <> 'Cancelled'");
             entity.HasOne(s => s.TimeSlot)
                 .WithMany(o => o.Signups)
                 .HasForeignKey(s => s.TimeSlotId)
                 .OnDelete(DeleteBehavior.Cascade);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+        });
+
+        modelBuilder.Entity<EmailMessage>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.To).HasMaxLength(320).IsRequired();
+            entity.Property(e => e.Subject).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.HtmlBody).IsRequired();
+            entity.HasIndex(e => e.Sent);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
         });
 

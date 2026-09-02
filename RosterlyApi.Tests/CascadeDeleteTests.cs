@@ -49,7 +49,7 @@ public class CascadeDeleteTests : IClassFixture<IntegrationTestFactory>
             .GetProperty("slots").EnumerateArray().First()
             .GetProperty("id").GetGuid();
 
-        await _client.PostAsJsonAsync($"/api/invite/{code}/signups", new { slotId, volunteerName = "Bob" });
+        await _client.PostAsJsonAsync($"/api/invite/{code}/signups", new { slotId, volunteerName = "Bob", email = "bob@example.com" });
 
         // Delete the event
         var deleteResp = await _client.DeleteAsync($"/api/events/{eventId}");

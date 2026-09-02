@@ -917,6 +917,152 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/invite/{code}/signups/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    code: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ResendSignupRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/signup/manage/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    token: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SignupManageResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/signup/manage/{token}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    token: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1003,6 +1149,7 @@ export interface components {
             /** Format: uuid */
             slotId: string;
             volunteerName: string;
+            email: string;
         };
         PublicSignupResponse: {
             /** Format: uuid */
@@ -1010,8 +1157,14 @@ export interface components {
             /** Format: uuid */
             slotId: string;
             volunteerName: string;
+            email: string;
             /** Format: date-time */
             createdAt: string;
+        };
+        ResendSignupRequest: {
+            /** Format: uuid */
+            slotId: string;
+            email: string;
         };
         RosterEventResponse: {
             /** Format: uuid */
@@ -1034,12 +1187,32 @@ export interface components {
             capacity: number | string;
             signups: components["schemas"]["SignupResponse"][];
         };
+        SignupManageResponse: {
+            /** Format: uuid */
+            signupId: string;
+            volunteerName: string;
+            email: string;
+            status: string;
+            /** Format: date-time */
+            confirmedAt: null | string;
+            organizationName: string;
+            eventTitle: string;
+            /** Format: date */
+            eventDate: string;
+            slotLabel: string;
+            /** Format: time */
+            startTime: string;
+            /** Format: time */
+            endTime: string;
+        };
         SignupResponse: {
             /** Format: uuid */
             id: string;
             /** Format: uuid */
             timeSlotId: string;
             volunteerName: string;
+            email: string;
+            status: string;
             /** Format: date-time */
             createdAt: string;
         };
@@ -1047,9 +1220,9 @@ export interface components {
             /** Format: uuid */
             id: string;
             label: string;
-            /** Format: date-time */
+            /** Format: time */
             startTime: string;
-            /** Format: date-time */
+            /** Format: time */
             endTime: string;
             /** Format: int32 */
             capacity: number | string;

@@ -13,7 +13,7 @@ import {
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { formatTime } from "@/lib/utils"
+import { activeSignupCount, formatTime } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -126,12 +126,15 @@ export function EventDetail() {
             <DialogHeader>
               <DialogTitle>Delete event?</DialogTitle>
               <DialogDescription>
-                This will permanently delete &ldquo;{event.title}&rdquo; and all associated
-                signups. This action cannot be undone.
+                This will permanently delete &ldquo;{event.title}&rdquo; and all
+                associated signups. This action cannot be undone.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setDeleteDialogOpen(false)}
+              >
                 Cancel
               </Button>
               <Button
@@ -163,17 +166,18 @@ export function EventDetail() {
                 <span>
                   {slot.label}
                   <span className="ml-2 font-normal text-muted-foreground">
-                    {formatTime(slot.startTime)}&ndash;{formatTime(slot.endTime)}
+                    {formatTime(slot.startTime)}&ndash;
+                    {formatTime(slot.endTime)}
                   </span>
                 </span>
                 <Badge
                   variant={
-                    slot.signups.length >= slot.capacity
+                    activeSignupCount(slot.signups) >= slot.capacity
                       ? "destructive"
                       : "secondary"
                   }
                 >
-                  {slot.signups.length}/{slot.capacity}
+                  {activeSignupCount(slot.signups)}/{slot.capacity}
                 </Badge>
               </CardTitle>
             </CardHeader>
@@ -189,6 +193,7 @@ export function EventDetail() {
                     <tr className="border-b text-left text-muted-foreground">
                       <th className="pb-1 font-medium">Volunteer</th>
                       <th className="pb-1 font-medium">Signed up</th>
+                      <th className="pb-1 font-medium">Status</th>
                       <th className="w-10 pb-1" />
                     </tr>
                   </thead>
@@ -198,6 +203,9 @@ export function EventDetail() {
                         <td className="py-1">{s.volunteerName}</td>
                         <td className="py-1 text-muted-foreground">
                           {new Date(s.createdAt).toLocaleString()}
+                        </td>
+                        <td className="py-1">
+                          <SignupStatusBadge status={s.status} />
                         </td>
                         <td className="py-1">
                           <Button
@@ -334,6 +342,36 @@ function InviteLinkSection({ eventId }: InviteLinkSectionProps) {
         ))}
       </CardContent>
     </Card>
+  )
+}
+
+const STATUS_CONFIG: Record<
+  string,
+  {
+    label: string
+    variant: "default" | "secondary" | "destructive" | "outline"
+    className?: string
+  }
+> = {
+  Confirmed: { label: "Confirmed", variant: "default" },
+  Pending: {
+    label: "Pending",
+    variant: "outline",
+    className:
+      "border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-400",
+  },
+  Cancelled: { label: "Cancelled", variant: "destructive" },
+}
+
+function SignupStatusBadge({ status }: { status: string }) {
+  const cfg = STATUS_CONFIG[status] ?? {
+    label: status,
+    variant: "secondary" as const,
+  }
+  return (
+    <Badge variant={cfg.variant} className={cfg.className}>
+      {cfg.label}
+    </Badge>
   )
 }
 

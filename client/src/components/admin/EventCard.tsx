@@ -1,17 +1,14 @@
 import { Link } from "react-router-dom"
-import { Trash2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { formatTime } from "@/lib/utils"
+import { activeSignupCount, formatTime } from "@/lib/utils"
 import type { RosterEvent } from "@/lib/types"
 
 interface EventCardProps {
   event: RosterEvent
-  onDeleteSignup: (signupId: string) => void
 }
 
-export function EventCard({ event, onDeleteSignup }: EventCardProps) {
+export function EventCard({ event }: EventCardProps) {
   return (
     <Card>
       <CardHeader className="p-3 pb-0">
@@ -25,51 +22,27 @@ export function EventCard({ event, onDeleteSignup }: EventCardProps) {
         {event.slots.length === 0 && (
           <p className="text-xs text-muted-foreground">No slots</p>
         )}
-        {event.slots.map((slot) => (
-          <div key={slot.id} className="rounded-md border p-2 text-xs">
-            <div className="mb-1 flex items-center justify-between">
-              <span className="font-medium">
-                {slot.label}
-                <span className="ml-1 text-muted-foreground">
-                  ({formatTime(slot.startTime)}–{formatTime(slot.endTime)})
+        {event.slots.map((slot) => {
+          const count = activeSignupCount(slot.signups)
+          return (
+            <div key={slot.id} className="rounded-md border p-2 text-xs">
+              <div className="mb-1 flex items-center justify-between">
+                <span className="font-medium">
+                  {slot.label}
+                  <span className="ml-1 text-muted-foreground">
+                    ({formatTime(slot.startTime)}–{formatTime(slot.endTime)})
+                  </span>
                 </span>
-              </span>
-              <Badge
-                variant={
-                  slot.signups.length >= slot.capacity
-                    ? "destructive"
-                    : "secondary"
-                }
-                className="text-[10px]"
-              >
-                {slot.signups.length}/{slot.capacity}
-              </Badge>
+                <Badge
+                  variant={count >= slot.capacity ? "destructive" : "secondary"}
+                  className="text-[10px]"
+                >
+                  {count}/{slot.capacity}
+                </Badge>
+              </div>
             </div>
-            {slot.signups.length === 0 && (
-              <p className="text-muted-foreground italic">No signups yet</p>
-            )}
-            {slot.signups.length > 0 && (
-              <ul className="space-y-0.5">
-                {slot.signups.map((s) => (
-                  <li key={s.id} className="flex items-center justify-between">
-                    <span>{s.volunteerName}</span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-4 w-4 text-muted-foreground hover:text-destructive"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onDeleteSignup(s.id)
-                      }}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        ))}
+          )
+        })}
       </CardContent>
     </Card>
   )

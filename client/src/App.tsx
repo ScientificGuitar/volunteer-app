@@ -18,6 +18,7 @@ import { CreateEvent } from "@/pages/admin/CreateEvent"
 import { EventDetail } from "@/pages/admin/EventDetail"
 import { EditEvent } from "@/pages/admin/EditEvent"
 import { InvitePage } from "@/pages/public/InvitePage"
+import { SignupManagePage } from "@/pages/public/SignupManagePage"
 import { cn } from "@/lib/utils"
 import { useOrg } from "@/hooks/useOrg"
 
@@ -153,6 +154,7 @@ export function App() {
       <main className="flex-1 p-6">
         <Routes>
           <Route path="/invite/:code" element={<InvitePage />} />
+          <Route path="/signup/manage/:token" element={<SignupManagePage />} />
           <Route path="/" element={<HomeRoute />} />
           <Route element={<RequireAuth />}>
             <Route path="/dashboard" element={<Dashboard />} />

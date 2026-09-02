@@ -3,7 +3,6 @@ import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { EventCard } from "@/components/admin/EventCard"
 import { useRoster } from "@/hooks/useRoster"
-import { useDeleteSignup } from "@/hooks/useDeleteSignup"
 
 interface WeeklyGridProps {
   orgId: string
@@ -58,7 +57,6 @@ export function WeeklyGrid({ orgId }: WeeklyGridProps) {
     error,
     refetch,
   } = useRoster(orgId, weekStart)
-  const deleteSignup = useDeleteSignup()
 
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(monday)
@@ -76,10 +74,6 @@ export function WeeklyGrid({ orgId }: WeeklyGridProps) {
     const d = new Date(monday)
     d.setDate(d.getDate() + 7)
     setMonday(d)
-  }
-
-  const handleDeleteSignup = async (signupId: string) => {
-    await deleteSignup.mutateAsync(signupId)
   }
 
   const eventsByDate = useMemo(() => {
@@ -138,11 +132,7 @@ export function WeeklyGrid({ orgId }: WeeklyGridProps) {
             </div>
             <div className="space-y-2">
               {(eventsByDate.get(day.date) ?? []).map((evt) => (
-                <EventCard
-                  key={evt.id}
-                  event={evt}
-                  onDeleteSignup={handleDeleteSignup}
-                />
+                <EventCard key={evt.id} event={evt} />
               ))}
             </div>
           </div>

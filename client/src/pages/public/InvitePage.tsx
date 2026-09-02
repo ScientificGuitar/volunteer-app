@@ -1,21 +1,24 @@
 import { useState } from "react"
 import { useParams } from "react-router-dom"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { Calendar, Users, CheckCircle2 } from "lucide-react"
+import { Calendar, Users, MailCheck } from "lucide-react"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { createPublicApi } from "@/lib/api"
-import { formatTime } from "@/lib/utils"
+import { Label } from "@/components/ui/label"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { createPublicApi, ApiError } from "@/lib/api"
 import type { PublicSlot } from "@/lib/types"
+import { cn } from "@/lib/utils"
 
 const api = createPublicApi()
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 export function InvitePage() {
   const { code } = useParams<{ code: string }>()
-  const queryClient = useQueryClient()
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["invite", code],
@@ -71,53 +74,76 @@ export function InvitePage() {
           <Users className="h-5 w-5" />
           Volunteer slots
         </h2>
-        {event.slots.length === 0 && (
+        {event.slots.length === 0 ? (
           <p className="rounded-md border border-dashed py-8 text-center text-sm text-muted-foreground">
             No slots have been created for this event yet.
           </p>
+        ) : (
+          <SignupForm slots={event.slots} code={code!} />
         )}
-        {event.slots.map((slot) => (
-          <SlotCard
-            key={slot.id}
-            slot={slot}
-            onSignUp={async (volunteerName) => {
-              await api.createSignup(code!, { slotId: slot.id, volunteerName })
-              await queryClient.invalidateQueries({
-                queryKey: ["invite", code],
-              })
-            }}
-          />
-        ))}
       </section>
     </div>
   )
 }
 
-interface SlotCardProps {
-  slot: PublicSlot
-  onSignUp: (volunteerName: string) => Promise<void>
-}
-
-function SlotCard({ slot, onSignUp }: SlotCardProps) {
+function SignupForm({ slots, code }: { slots: PublicSlot[]; code: string }) {
+  const queryClient = useQueryClient()
+  const [selectedSlotId, setSelectedSlotId] = useState<string>("")
   const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
   const [submitting, setSubmitting] = useState(false)
-  const [signedUp, setSignedUp] = useState(false)
+  const [sentEmail, setSentEmail] = useState<string | null>(null)
+  const [emailError, setEmailError] = useState<string | null>(null)
+  const [duplicatePending, setDuplicatePending] = useState(false)
+  const [resending, setResending] = useState(false)
+
+  const canSubmit = !!selectedSlotId && !!name.trim() && !!email.trim()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const trimmed = name.trim()
-    if (!trimmed) {
+    const trimmedName = name.trim()
+    const trimmedEmail = email.trim()
+
+    if (!selectedSlotId) {
+      toast.error("Please select a slot to sign up for")
+      return
+    }
+    if (!trimmedName) {
       toast.error("Please enter your name")
       return
     }
+    if (!trimmedEmail) {
+      setEmailError("Please enter your email")
+      return
+    }
+    if (!EMAIL_REGEX.test(trimmedEmail)) {
+      setEmailError("Please enter a valid email address")
+      return
+    }
+
     setSubmitting(true)
     try {
-      await onSignUp(trimmed)
-      setSignedUp(true)
-      toast.success(`You're signed up for ${slot.label}`)
+      await api.createSignup(code, {
+        slotId: selectedSlotId,
+        volunteerName: trimmedName,
+        email: trimmedEmail,
+      })
+      setSentEmail(trimmedEmail)
+      await queryClient.invalidateQueries({ queryKey: ["invite", code] })
     } catch (err) {
+      if (err instanceof ApiError) {
+        if (err.code === "duplicate_pending") {
+          setDuplicatePending(true)
+          return
+        }
+        if (err.code === "duplicate_confirmed") {
+          toast.error("You're already confirmed for this slot.")
+          return
+        }
+      }
       if (err instanceof Error && err.message.toLowerCase().includes("full")) {
-        toast.error("This slot just filled up — please pick another.")
+        toast.error("That slot just filled up — please pick another.")
+        await queryClient.invalidateQueries({ queryKey: ["invite", code] })
       } else {
         toast.error(err instanceof Error ? err.message : "Sign up failed")
       }
@@ -126,49 +152,155 @@ function SlotCard({ slot, onSignUp }: SlotCardProps) {
     }
   }
 
-  const percent =
-    slot.capacity > 0
-      ? Math.min(100, (slot.signupCount / slot.capacity) * 100)
-      : 0
+  const handleResend = async () => {
+    const trimmedEmail = email.trim()
+    setResending(true)
+    try {
+      await api.resendSignup(code, {
+        slotId: selectedSlotId,
+        email: trimmedEmail,
+      })
+      setDuplicatePending(false)
+      setSentEmail(trimmedEmail)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to resend email")
+    } finally {
+      setResending(false)
+    }
+  }
+
+  const resetForAnother = () => {
+    setSentEmail(null)
+    setSelectedSlotId("")
+  }
+
+  if (sentEmail) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center gap-3 p-6 text-center">
+          <MailCheck className="h-8 w-8 text-green-600 dark:text-green-400" />
+          <p className="text-sm text-green-700 dark:text-green-300">
+            Check your email! We sent a confirmation link to{" "}
+            <strong>{sentEmail}</strong>. Click it to confirm your signup.
+          </p>
+          <Button variant="outline" size="sm" onClick={resetForAnother}>
+            Sign up for another slot
+          </Button>
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <Card>
       <CardHeader className="p-4 pb-2">
-        <CardTitle className="flex items-center justify-between text-base">
-          <span>
-            {slot.label}
-            <span className="ml-2 font-normal text-muted-foreground">
-              {formatTime(slot.startTime)}&ndash;{formatTime(slot.endTime)}
-            </span>
-          </span>
-          <Badge variant={slot.isFull ? "destructive" : "secondary"}>
-            {slot.signupCount}/{slot.capacity}
-          </Badge>
-        </CardTitle>
+        <CardTitle className="text-base">Select a slot</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3 p-4 pt-2">
-        <CapacityBar percent={percent} isFull={slot.isFull} />
+      <CardContent className="space-y-4 p-4 pt-2">
+        <RadioGroup
+          value={selectedSlotId}
+          onValueChange={(value) => {
+            setSelectedSlotId(value)
+            setDuplicatePending(false)
+          }}
+          className="gap-2"
+        >
+          {slots.map((slot) => {
+            const percent =
+              slot.capacity > 0
+                ? Math.min(100, (slot.signupCount / slot.capacity) * 100)
+                : 0
+            return (
+              <Label
+                key={slot.id}
+                htmlFor={`slot-${slot.id}`}
+                className={cn(
+                  "flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50",
+                  slot.isFull &&
+                    "cursor-not-allowed opacity-60 hover:bg-transparent",
+                  selectedSlotId === slot.id && "border-primary bg-primary/5"
+                )}
+              >
+                <RadioGroupItem
+                  id={`slot-${slot.id}`}
+                  value={slot.id}
+                  disabled={slot.isFull}
+                  className="mt-0.5"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium">
+                      {slot.label}
+                      <span className="ml-2 font-normal text-muted-foreground">
+                        {formatTime(slot.startTime)}&ndash;
+                        {formatTime(slot.endTime)}
+                      </span>
+                    </span>
+                    <Badge variant={slot.isFull ? "destructive" : "secondary"}>
+                      {slot.isFull
+                        ? "Full"
+                        : `${slot.signupCount}/${slot.capacity}`}
+                    </Badge>
+                  </div>
+                  <div className="mt-2">
+                    <CapacityBar percent={percent} isFull={slot.isFull} />
+                  </div>
+                </div>
+              </Label>
+            )
+          })}
+        </RadioGroup>
 
-        {signedUp ? (
-          <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700 dark:border-green-900 dark:bg-green-950 dark:text-green-300">
-            <CheckCircle2 className="h-4 w-4" />
-            You&rsquo;re signed up. See you there!
+        {duplicatePending ? (
+          <div className="space-y-3 rounded-md border border-amber-300 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-950">
+            <p className="text-sm text-amber-800 dark:text-amber-300">
+              You already have a pending signup for this slot. Check your email
+              to confirm it.
+            </p>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={handleResend} disabled={resending}>
+                {resending ? "Sending..." : "Resend confirmation email"}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setDuplicatePending(false)}
+              >
+                Choose another slot
+              </Button>
+            </div>
           </div>
-        ) : slot.isFull ? (
-          <p className="rounded-md border border-dashed p-3 text-center text-sm text-muted-foreground">
-            This slot is full.
-          </p>
         ) : (
-          <form onSubmit={handleSubmit} className="flex items-center gap-2">
+          <form onSubmit={handleSubmit} className="space-y-3">
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Your name"
               maxLength={200}
-              className="h-9"
               disabled={submitting}
             />
-            <Button type="submit" size="sm" disabled={submitting}>
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value)
+                if (emailError) setEmailError(null)
+              }}
+              placeholder="Your email"
+              maxLength={320}
+              disabled={submitting}
+              aria-invalid={!!emailError}
+            />
+            {emailError && (
+              <p className="text-sm text-destructive" role="alert">
+                {emailError}
+              </p>
+            )}
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={!canSubmit || submitting}
+            >
               {submitting ? "Signing up..." : "Sign up"}
             </Button>
           </form>
@@ -197,6 +329,10 @@ function CapacityBar({
       />
     </div>
   )
+}
+
+function formatTime(value: string): string {
+  return value.length >= 5 ? value.slice(0, 5) : value
 }
 
 function formatDate(iso: string): string {

@@ -32,6 +32,10 @@ services:
       Clerk__Issuer: "${CLERK_ISSUER}"
       Clerk__AuthorizedParties: "${CLERK_AUTHORIZED_PARTIES}"
       Cors__Origins: "${CORS_ORIGINS}"
+      Resend__ApiKey: "${RESEND_API_KEY}"
+      Email__FromEmail: "${EMAIL_FROM_EMAIL}"
+      Email__FromName: "${EMAIL_FROM_NAME:-Rosterly}"
+      Email__BaseUrl: "${EMAIL_BASE_URL}"
     depends_on:
       db:
         condition: service_healthy
