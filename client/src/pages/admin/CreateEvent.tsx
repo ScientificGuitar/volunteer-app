@@ -1,5 +1,6 @@
 import { useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { Plus, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -20,6 +21,7 @@ export function CreateEvent() {
   const { org, error: orgError } = useOrg()
   const api = useApi()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [date, setDate] = useState("")
@@ -92,6 +94,7 @@ export function CreateEvent() {
             : null,
       })
       toast.success("Event created")
+      await queryClient.invalidateQueries({ queryKey: ["roster"] })
       navigate("/dashboard")
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to create event"
