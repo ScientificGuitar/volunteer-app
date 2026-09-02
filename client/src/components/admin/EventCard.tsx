@@ -10,15 +10,15 @@ interface EventCardProps {
 
 export function EventCard({ event }: EventCardProps) {
   return (
-    <Card>
-      <CardHeader className="p-3 pb-0">
+    <Card size="sm">
+      <CardHeader className="pb-0">
         <CardTitle className="text-sm font-semibold">
           <Link to={`/events/${event.id}`} className="hover:underline">
             {event.title}
           </Link>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2 p-3 pt-2">
+      <CardContent className="space-y-2">
         {event.slots.length === 0 && (
           <p className="text-xs text-muted-foreground">No slots</p>
         )}
@@ -26,13 +26,13 @@ export function EventCard({ event }: EventCardProps) {
           const count = activeSignupCount(slot.signups)
           return (
             <div key={slot.id} className="rounded-md border p-2 text-xs">
-              <div className="mb-1 flex items-center justify-between">
-                <span className="font-medium">
-                  {slot.label}
-                  <span className="ml-1 text-muted-foreground">
-                    ({formatTime(slot.startTime)}–{formatTime(slot.endTime)})
-                  </span>
-                </span>
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="font-medium">{slot.label}</div>
+                  <div className="text-muted-foreground">
+                    {formatTime(slot.startTime)}–{formatTime(slot.endTime)}
+                  </div>
+                </div>
                 <Badge
                   variant={count >= slot.capacity ? "destructive" : "secondary"}
                   className="text-[10px]"

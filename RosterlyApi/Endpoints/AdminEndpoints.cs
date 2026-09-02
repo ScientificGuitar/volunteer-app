@@ -205,7 +205,7 @@ public static class AdminEndpoints
 
         return Results.Ok(events.Select(e => new EventWithSlotsResponse(
             e.Id, e.OrganizationId, e.Title, e.Description, e.Date, e.CreatedAt,
-            e.TimeSlots.Select(s => new TimeSlotResponse(s.Id, s.EventId, s.Label, e.Date.ToDateTime(s.StartTime), e.Date.ToDateTime(s.EndTime), s.Capacity, s.Signups.Count(sg => sg.Status != SignupStatus.Cancelled)))
+            e.TimeSlots.OrderBy(s => s.StartTime).Select(s => new TimeSlotResponse(s.Id, s.EventId, s.Label, e.Date.ToDateTime(s.StartTime), e.Date.ToDateTime(s.EndTime), s.Capacity, s.Signups.Count(sg => sg.Status != SignupStatus.Cancelled)))
         )));
     }
 
@@ -340,7 +340,7 @@ public static class AdminEndpoints
 
         return Results.Ok(events.Select(e => new RosterEventResponse(
             e.Id, e.Title, e.Description, e.Date,
-            e.TimeSlots.Select(s => new RosterSlotResponse(
+            e.TimeSlots.OrderBy(s => s.StartTime).Select(s => new RosterSlotResponse(
                 s.Id, s.Label, e.Date.ToDateTime(s.StartTime), e.Date.ToDateTime(s.EndTime), s.Capacity,
                 s.Signups.Select(su => new SignupResponse(su.Id, su.TimeSlotId, su.VolunteerName, su.Email, su.Status.ToString(), su.CreatedAt))
             ))
@@ -378,7 +378,7 @@ public static class AdminEndpoints
 
         return Results.Ok(new RosterEventResponse(
             evt.Id, evt.Title, evt.Description, evt.Date,
-            evt.TimeSlots.Select(s => new RosterSlotResponse(
+            evt.TimeSlots.OrderBy(s => s.StartTime).Select(s => new RosterSlotResponse(
                 s.Id, s.Label, evt.Date.ToDateTime(s.StartTime), evt.Date.ToDateTime(s.EndTime), s.Capacity,
                 s.Signups.Select(su => new SignupResponse(su.Id, su.TimeSlotId, su.VolunteerName, su.Email, su.Status.ToString(), su.CreatedAt))
             ))
