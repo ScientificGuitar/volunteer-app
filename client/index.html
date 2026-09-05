@@ -4,7 +4,44 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#09090b" />
     <title>Rosterly</title>
+    <style>
+      html {
+        background-color: #ffffff;
+        color-scheme: light;
+      }
+      html.dark {
+        background-color: #09090b;
+        color-scheme: dark;
+      }
+      html.light {
+        background-color: #ffffff;
+        color-scheme: light;
+      }
+    </style>
+    <script>
+      try {
+        var stored = localStorage.getItem("theme");
+        var theme =
+          stored === "dark" || stored === "light" || stored === "system"
+            ? stored
+            : "system";
+        var resolved =
+          theme === "system"
+            ? window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light"
+            : theme;
+        document.documentElement.classList.remove("light", "dark");
+        document.documentElement.classList.add(resolved);
+        document.documentElement.style.colorScheme = resolved;
+      } catch (e) {
+        /* ignore (e.g. private mode) — React ThemeProvider will apply theme */
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -93,6 +93,7 @@ export function ThemeProvider({
 
       root.classList.remove("light", "dark")
       root.classList.add(resolvedTheme)
+      root.style.colorScheme = resolvedTheme
 
       if (restoreTransitions) {
         restoreTransitions()
@@ -101,7 +102,9 @@ export function ThemeProvider({
     [disableTransitionOnChange]
   )
 
-  React.useEffect(() => {
+  // useLayoutEffect: applies the class before paint so remounts can't flash.
+  // (Initial load is covered by the blocking script in index.html.)
+  React.useLayoutEffect(() => {
     applyTheme(theme)
 
     if (theme !== "system") {
