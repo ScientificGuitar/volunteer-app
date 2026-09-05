@@ -74,8 +74,8 @@ public static class PublicEndpoints
                     .OrderBy(s => s.StartTime)
                     .Select(s => new SlotAvailabilityResponse(
                         s.Id, s.Label, s.StartTime, s.EndTime, s.Capacity,
-                        s.Signups.Count(sg => sg.Status != SignupStatus.Cancelled),
-                        s.Signups.Count(sg => sg.Status != SignupStatus.Cancelled) >= s.Capacity
+                        s.Signups.Count(sg => sg.Status != SignupStatus.Cancelled && sg.Status != SignupStatus.Removed),
+                        s.Signups.Count(sg => sg.Status != SignupStatus.Cancelled && sg.Status != SignupStatus.Removed) >= s.Capacity
                     ))
             )
         ));
@@ -126,7 +126,8 @@ public static class PublicEndpoints
             var existingStatus = await db.Signups
                 .Where(s => s.TimeSlotId == request.SlotId
                     && s.Email == email
-                    && s.Status != SignupStatus.Cancelled)
+                    && s.Status != SignupStatus.Cancelled
+                    && s.Status != SignupStatus.Removed)
                 .Select(s => (SignupStatus?)s.Status)
                 .FirstOrDefaultAsync(ct);
 
@@ -148,7 +149,7 @@ public static class PublicEndpoints
             if (dbTx is not null) cmd.Transaction = dbTx;
             cmd.CommandText = """
                 SELECT t."Capacity",
-                       (SELECT COUNT(*) FROM "Signups" WHERE "TimeSlotId" = t."Id" AND "Status" <> 'Cancelled') AS cnt
+                       (SELECT COUNT(*) FROM "Signups" WHERE "TimeSlotId" = t."Id" AND "Status" NOT IN ('Cancelled', 'Removed')) AS cnt
                 FROM "TimeSlots" t
                 WHERE t."Id" = @slotId AND t."EventId" = @eventId
                 """;
@@ -254,6 +255,13 @@ public static class PublicEndpoints
         if (signup is null)
             return Results.NotFound(new { error = "Signup link not found" });
 
+        if (signup.Status == SignupStatus.Removed)
+            return Results.Conflict(new
+            {
+                error = "This signup was removed by the organization.",
+                code = "removed_by_organization"
+            });
+
         if (signup.Status != SignupStatus.Cancelled)
         {
             signup.Status = SignupStatus.Cancelled;
@@ -293,6 +301,13 @@ public static class PublicEndpoints
 
         if (signup.Status == SignupStatus.Confirmed)
             return Results.Conflict(new { error = "You're already confirmed for this slot." });
+
+        if (signup.Status == SignupStatus.Removed)
+            return Results.NotFound(new
+            {
+                error = "This signup was removed by the organization.",
+                code = "removed_by_organization"
+            });
 
         if (signup.Status == SignupStatus.Cancelled)
             return Results.NotFound(new { error = "No pending signup found for this email and slot" });

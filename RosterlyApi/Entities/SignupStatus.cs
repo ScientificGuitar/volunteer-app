@@ -4,5 +4,6 @@ public enum SignupStatus
 {
     Pending,
     Confirmed,
-    Cancelled
+    Cancelled,
+    Removed
 }

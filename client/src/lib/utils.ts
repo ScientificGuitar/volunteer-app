@@ -7,7 +7,9 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function activeSignupCount(signups: SignupInfo[]): number {
-  return signups.filter((s) => s.status !== "Cancelled").length
+  return signups.filter(
+    (s) => s.status !== "Cancelled" && s.status !== "Removed"
+  ).length
 }
 
 export function formatTime(iso: string): string {

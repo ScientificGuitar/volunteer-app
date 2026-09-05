@@ -269,6 +269,121 @@ public class AdminEndpointTests : IClassFixture<IntegrationTestFactory>
         var response = await _client.DeleteAsync($"/api/signups/{signupId}");
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        // Soft-removed, not hard-deleted
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var stored = await db.Signups.SingleAsync(s => s.Id == signupId);
+        Assert.Equal(SignupStatus.Removed, stored.Status);
+    }
+
+    [Fact]
+    public async Task AdminDeleteSignup_NotifiesVolunteerAndManageLinkShowsRemoved()
+    {
+        var (_, eventId, slotId) = await SeedSlotAsync("Admin Del Notify");
+
+        var linkResp = await _client.PostAsJsonAsync($"/api/events/{eventId}/invite-links", new { });
+        var link = await linkResp.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        var code = link.GetProperty("code").GetString()!;
+
+        var signupResp = await _client.PostAsJsonAsync($"/api/invite/{code}/signups",
+            new { slotId, volunteerName = "Remy", email = "remy@example.com" });
+        Assert.Equal(HttpStatusCode.Created, signupResp.StatusCode);
+        var signup = await signupResp.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        var signupId = signup.GetProperty("id").GetGuid();
+
+        string rawToken;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var message = await db.EmailMessages.SingleAsync(m => m.To == "remy@example.com");
+            rawToken = message.HtmlBody
+                .Substring(message.HtmlBody.IndexOf("/signup/manage/", StringComparison.Ordinal) + "/signup/manage/".Length)
+                .Split('"')[0];
+        }
+
+        var deleteResp = await _client.DeleteAsync($"/api/signups/{signupId}");
+        Assert.Equal(HttpStatusCode.NoContent, deleteResp.StatusCode);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var stored = await db.Signups.SingleAsync(s => s.Id == signupId);
+            Assert.Equal(SignupStatus.Removed, stored.Status);
+
+            var removal = await db.EmailMessages
+                .Where(m => m.To == "remy@example.com")
+                .OrderByDescending(m => m.CreatedAt)
+                .FirstAsync();
+            Assert.Contains("Update on your signup", removal.Subject, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("removed", removal.HtmlBody, StringComparison.OrdinalIgnoreCase);
+        }
+
+        // Manage link still resolves, showing Removed instead of "Invalid link"
+        var manageResp = await _client.GetAsync($"/api/signup/manage/{rawToken}");
+        Assert.Equal(HttpStatusCode.OK, manageResp.StatusCode);
+        var manage = await manageResp.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        Assert.Equal("Removed", manage.GetProperty("status").GetString());
+
+        // Volunteer cancel after removal is rejected with a distinct code
+        var cancelResp = await _client.PostAsync($"/api/signup/manage/{rawToken}/cancel", null);
+        Assert.Equal(HttpStatusCode.Conflict, cancelResp.StatusCode);
+        var cancelBody = await cancelResp.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        Assert.Equal("removed_by_organization", cancelBody.GetProperty("code").GetString());
+
+        // Resend after removal reports removal, and the spot is freed for re-signup
+        var resendResp = await _client.PostAsJsonAsync($"/api/invite/{code}/signups/resend",
+            new { slotId, email = "remy@example.com" });
+        Assert.Equal(HttpStatusCode.NotFound, resendResp.StatusCode);
+
+        var resSignupResp = await _client.PostAsJsonAsync($"/api/invite/{code}/signups",
+            new { slotId, volunteerName = "Remy", email = "remy@example.com" });
+        Assert.Equal(HttpStatusCode.Created, resSignupResp.StatusCode);
+    }
+
+    [Fact]
+    public async Task AdminDeleteSignup_AlreadyCancelled_SendsNoEmail()
+    {
+        var (_, eventId, slotId) = await SeedSlotAsync("Admin Del Cancelled");
+
+        var linkResp = await _client.PostAsJsonAsync($"/api/events/{eventId}/invite-links", new { });
+        var link = await linkResp.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        var code = link.GetProperty("code").GetString()!;
+
+        var signupResp = await _client.PostAsJsonAsync($"/api/invite/{code}/signups",
+            new { slotId, volunteerName = "Gone", email = "gone@example.com" });
+        var signup = await signupResp.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        var signupId = signup.GetProperty("id").GetGuid();
+
+        string rawToken;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var message = await db.EmailMessages.SingleAsync(m => m.To == "gone@example.com");
+            rawToken = message.HtmlBody
+                .Substring(message.HtmlBody.IndexOf("/signup/manage/", StringComparison.Ordinal) + "/signup/manage/".Length)
+                .Split('"')[0];
+        }
+
+        // Volunteer cancels first
+        var cancelResp = await _client.PostAsync($"/api/signup/manage/{rawToken}/cancel", null);
+        Assert.Equal(HttpStatusCode.OK, cancelResp.StatusCode);
+
+        int emailCount;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            emailCount = await db.EmailMessages.CountAsync(m => m.To == "gone@example.com");
+        }
+
+        var deleteResp = await _client.DeleteAsync($"/api/signups/{signupId}");
+        Assert.Equal(HttpStatusCode.NoContent, deleteResp.StatusCode);
+
+        using var verifyScope = _factory.Services.CreateScope();
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var stored = await verifyDb.Signups.SingleAsync(s => s.Id == signupId);
+        Assert.Equal(SignupStatus.Cancelled, stored.Status);
+        Assert.Equal(emailCount, await verifyDb.EmailMessages.CountAsync(m => m.To == "gone@example.com"));
     }
 
     // --- Invite Links ---

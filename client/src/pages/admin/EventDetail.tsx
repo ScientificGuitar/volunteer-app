@@ -44,7 +44,7 @@ export function EventDetail() {
   const handleDeleteSignup = async (signupId: string) => {
     try {
       await deleteSignup.mutateAsync(signupId)
-      toast.success("Signup removed")
+      toast.success("Signup removed — volunteer notified")
       setPendingSignupId(null)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to delete signup")
@@ -187,7 +187,7 @@ export function EventDetail() {
           if (!open) setPendingSignupId(null)
         }}
         title="Remove signup?"
-        description="This will remove the volunteer from this slot. This action cannot be undone."
+        description="This will remove the volunteer from this slot and notify them by email. This action cannot be undone."
         confirmLabel="Remove"
         variant="destructive"
         isLoading={deleteSignup.isPending}
@@ -425,6 +425,7 @@ const STATUS_CONFIG: Record<
       "border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-400",
   },
   Cancelled: { label: "Cancelled", variant: "destructive" },
+  Removed: { label: "Removed", variant: "secondary" },
 }
 
 function SignupStatusBadge({ status }: { status: string }) {

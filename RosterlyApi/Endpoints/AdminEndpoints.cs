@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 using RosterlyApi.Data;
 using RosterlyApi.Entities;
+using RosterlyApi.Services;
 using RosterlyApi.Validation;
 
 namespace RosterlyApi.Endpoints;
@@ -206,7 +207,7 @@ public static class AdminEndpoints
 
         return Results.Ok(events.Select(e => new EventWithSlotsResponse(
             e.Id, e.OrganizationId, e.Title, e.Description, e.Location, e.Date, e.CreatedAt,
-            e.TimeSlots.OrderBy(s => s.StartTime).Select(s => new TimeSlotResponse(s.Id, s.EventId, s.Label, e.Date.ToDateTime(s.StartTime), e.Date.ToDateTime(s.EndTime), s.Capacity, s.Signups.Count(sg => sg.Status != SignupStatus.Cancelled)))
+            e.TimeSlots.OrderBy(s => s.StartTime).Select(s => new TimeSlotResponse(s.Id, s.EventId, s.Label, e.Date.ToDateTime(s.StartTime), e.Date.ToDateTime(s.EndTime), s.Capacity, s.Signups.Count(sg => sg.Status != SignupStatus.Cancelled && sg.Status != SignupStatus.Removed)))
         )));
     }
 
@@ -284,7 +285,7 @@ public static class AdminEndpoints
 
         if (slot is null) return Results.NotFound();
 
-        var signupCount = await db.Signups.CountAsync(s => s.TimeSlotId == slotId && s.Status != SignupStatus.Cancelled, ct);
+        var signupCount = await db.Signups.CountAsync(s => s.TimeSlotId == slotId && s.Status != SignupStatus.Cancelled && s.Status != SignupStatus.Removed, ct);
 
         if (request.Capacity is not null && request.Capacity.Value < signupCount)
         {
@@ -354,7 +355,7 @@ public static class AdminEndpoints
 
     // --- Signups ---
 
-    private static async Task<IResult> DeleteSignup(Guid id, AppDbContext db, HttpContext http, CancellationToken ct)
+    private static async Task<IResult> DeleteSignup(Guid id, AppDbContext db, EmailOutboxService outbox, HttpContext http, CancellationToken ct)
     {
         var userId = GetUserId(http);
         var signup = await db.Signups
@@ -363,8 +364,26 @@ public static class AdminEndpoints
 
         if (signup is null) return Results.NotFound();
 
-        db.Signups.Remove(signup);
-        await db.SaveChangesAsync(ct);
+        // Already inactive: idempotent, no email.
+        if (signup.Status is SignupStatus.Cancelled or SignupStatus.Removed)
+            return Results.NoContent();
+
+        signup.Status = SignupStatus.Removed;
+
+        var slot = signup.TimeSlot;
+        var evt = slot.Event;
+        var (subject, html, text) = EmailTemplates.BuildSignupRemoved(
+            signup.VolunteerName,
+            evt.Organization.Name,
+            evt.Title,
+            evt.Date,
+            slot.StartTime,
+            slot.EndTime,
+            evt.Location);
+
+        // EnqueueAsync saves changes, persisting the status flip and the
+        // outbox row atomically.
+        await outbox.EnqueueAsync(signup.Email, subject, html, text, ct: ct);
 
         return Results.NoContent();
     }

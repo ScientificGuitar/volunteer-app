@@ -43,6 +43,7 @@ export function SignupManagePage() {
   }
 
   const isCancelled = cancelled || data.status === "Cancelled"
+  const isRemoved = !cancelled && data.status === "Removed"
 
   const handleCancel = async () => {
     setCancelling(true)
@@ -51,7 +52,9 @@ export function SignupManagePage() {
       setCancelled(true)
       toast.success("Your signup has been cancelled.")
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to cancel signup")
+      toast.error(
+        err instanceof Error ? err.message : "Failed to cancel signup"
+      )
     } finally {
       setCancelling(false)
     }
@@ -65,7 +68,9 @@ export function SignupManagePage() {
         </CardHeader>
         <CardContent className="space-y-4 p-6 pt-2">
           <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">{data.organizationName}</p>
+            <p className="text-sm text-muted-foreground">
+              {data.organizationName}
+            </p>
             <p className="text-lg font-semibold">{data.eventTitle}</p>
           </div>
 
@@ -96,12 +101,26 @@ export function SignupManagePage() {
 
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Status</span>
-            <Badge variant={isCancelled ? "destructive" : "default"}>
-              {isCancelled ? "Cancelled" : "Confirmed"}
+            <Badge
+              variant={
+                isCancelled
+                  ? "destructive"
+                  : isRemoved
+                    ? "secondary"
+                    : "default"
+              }
+            >
+              {isCancelled ? "Cancelled" : isRemoved ? "Removed" : "Confirmed"}
             </Badge>
           </div>
 
-          {isCancelled ? (
+          {isRemoved ? (
+            <div className="flex items-center gap-2 rounded-md border p-3 text-sm text-muted-foreground">
+              <CalendarX2 className="h-4 w-4" />
+              This signup was removed by the organization. Your spot has been
+              released.
+            </div>
+          ) : isCancelled ? (
             <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
               <CalendarX2 className="h-4 w-4" />
               You&rsquo;ve cancelled this signup. Your spot has been released.
