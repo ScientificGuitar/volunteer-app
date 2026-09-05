@@ -88,11 +88,11 @@ export function CreateEvent() {
         slots:
           slots.length > 0
             ? slots.map((s) => ({
-                label: s.label,
-                startTime: s.startTime,
-                endTime: s.endTime,
-                capacity: s.capacity,
-              }))
+              label: s.label,
+              startTime: s.startTime,
+              endTime: s.endTime,
+              capacity: s.capacity,
+            }))
             : null,
       })
       toast.success("Event created")
