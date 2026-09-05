@@ -10,11 +10,17 @@ import {
   Power,
   Pencil,
   MapPin,
+  Download,
 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { activeSignupCount, formatTime } from "@/lib/utils"
+import {
+  buildEventVolunteersCsv,
+  buildVolunteersFilename,
+  downloadCsv,
+} from "@/lib/csv"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -61,6 +67,17 @@ export function EventDetail() {
     }
   }
 
+  const handleExportCsv = () => {
+    if (!event) return
+    try {
+      const csv = buildEventVolunteersCsv(event)
+      downloadCsv(buildVolunteersFilename(event.title, event.date), csv)
+      toast.success("Volunteers exported to CSV")
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to export CSV")
+    }
+  }
+
   if (orgLoading || (isLoading && !event)) {
     return (
       <div className="py-12 text-center text-muted-foreground">Loading...</div>
@@ -95,6 +112,11 @@ export function EventDetail() {
     )
   }
 
+  const totalSignups = event.slots.reduce(
+    (count, slot) => count + slot.signups.length,
+    0
+  )
+
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div className="flex items-center gap-4">
@@ -115,6 +137,18 @@ export function EventDetail() {
             </p>
           )}
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleExportCsv}
+          disabled={totalSignups === 0}
+          title={
+            totalSignups === 0 ? "No volunteers to export" : "Export as CSV"
+          }
+        >
+          <Download className="mr-1 h-3 w-3" />
+          Export CSV
+        </Button>
         <Button
           variant="outline"
           size="sm"
