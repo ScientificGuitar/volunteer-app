@@ -17,7 +17,7 @@ public class ResendEmailSender : IEmailSender
         _logger = logger;
     }
 
-    public async Task SendAsync(string to, string subject, string htmlBody, string? textBody = null, CancellationToken ct = default)
+    public async Task SendAsync(string to, string subject, string htmlBody, string? textBody = null, EmailAttachment? attachment = null, CancellationToken ct = default)
     {
         var from = string.IsNullOrWhiteSpace(_emailOptions.FromName)
             ? _emailOptions.FromEmail
@@ -31,6 +31,19 @@ public class ResendEmailSender : IEmailSender
             HtmlBody = htmlBody,
             TextBody = textBody
         };
+
+        if (attachment is not null)
+        {
+            message.Attachments =
+            [
+                new Resend.EmailAttachment
+                {
+                    Filename = attachment.FileName,
+                    Content = new Resend.ByteArrayOrString(attachment.Content),
+                    ContentType = attachment.ContentType
+                }
+            ];
+        }
 
         var result = await _resend.EmailSendAsync(message, ct);
         if (!result.Success)

@@ -46,7 +46,3 @@
 - **ESLint**: ignores `dist` directory
 - shadcn components live in `src/components/ui/`
 - **Secrets via .env**: Resend API key and email config live in `.env` (loaded by `DotNetEnv`). Never commit `.env`; use `.env.example` as template.
-
-## Status
-
-MVP in progress. Auth (Clerk) and email (Resend) are implemented. Background jobs (Hangfire) are planned but not yet implemented.

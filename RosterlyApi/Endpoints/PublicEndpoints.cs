@@ -68,6 +68,7 @@ public static class PublicEndpoints
                 evt.Id,
                 evt.Title,
                 evt.Description,
+                evt.Location,
                 evt.Date,
                 evt.TimeSlots
                     .OrderBy(s => s.StartTime)
@@ -236,6 +237,7 @@ public static class PublicEndpoints
             signup.ConfirmedAt,
             evt.Organization.Name,
             evt.Title,
+            evt.Location,
             evt.Date,
             signup.TimeSlot.Label,
             signup.TimeSlot.StartTime,
@@ -313,6 +315,26 @@ public static class PublicEndpoints
         CancellationToken ct)
     {
         var manageUrl = $"{emailOptions.Value.BaseUrl.TrimEnd('/')}/signup/manage/{rawToken}";
+        var evt = slot.Event;
+        var links = CalendarInviteBuilder.BuildLinks(
+            evt.Title,
+            evt.Description,
+            evt.Location,
+            evt.Date,
+            slot.StartTime,
+            slot.EndTime,
+            slot.Label,
+            manageUrl);
+        var ics = CalendarInviteBuilder.BuildIcs(
+            evt.Title,
+            evt.Description,
+            evt.Location,
+            evt.Date,
+            slot.StartTime,
+            slot.EndTime,
+            slot.Label,
+            manageUrl,
+            signup.Id.ToString());
         var (subject, html, text) = EmailTemplates.BuildSignupConfirmation(
             signup.VolunteerName,
             slot.Event.Organization.Name,
@@ -320,9 +342,17 @@ public static class PublicEndpoints
             slot.Event.Date,
             slot.StartTime,
             slot.EndTime,
-            manageUrl);
+            manageUrl,
+            evt.Location,
+            links,
+            hasCalendarAttachment: true);
 
-        await outbox.EnqueueAsync(signup.Email, subject, html, text, ct);
+        var attachment = new EmailAttachment(
+            CalendarInviteBuilder.IcsFileName(evt.Title),
+            "text/calendar",
+            System.Text.Encoding.UTF8.GetBytes(ics));
+
+        await outbox.EnqueueAsync(signup.Email, subject, html, text, attachment, ct);
     }
 
     private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
@@ -367,7 +397,7 @@ public record ResendSignupRequest(
 
 public record InvitePageResponse(Guid OrganizationId, string OrganizationName, EventPublicResponse Event);
 
-public record EventPublicResponse(Guid Id, string Title, string? Description, DateOnly Date, IEnumerable<SlotAvailabilityResponse> Slots);
+public record EventPublicResponse(Guid Id, string Title, string? Description, string? Location, DateOnly Date, IEnumerable<SlotAvailabilityResponse> Slots);
 
 public record SlotAvailabilityResponse(Guid Id, string Label, TimeOnly StartTime, TimeOnly EndTime, int Capacity, int SignupCount, bool IsFull);
 
@@ -381,6 +411,7 @@ public record SignupManageResponse(
     DateTime? ConfirmedAt,
     string OrganizationName,
     string EventTitle,
+    string? EventLocation,
     DateOnly EventDate,
     string SlotLabel,
     TimeOnly StartTime,

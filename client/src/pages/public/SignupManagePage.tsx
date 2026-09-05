@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useParams } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
-import { Calendar, Clock, Mail, CalendarX2 } from "lucide-react"
+import { Calendar, Clock, Mail, MapPin, CalendarX2 } from "lucide-react"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -80,6 +80,12 @@ export function SignupManagePage() {
               <Clock className="h-4 w-4 text-muted-foreground" />
               {formatTime(data.startTime)}&ndash;{formatTime(data.endTime)}
             </p>
+            {data.eventLocation && (
+              <p className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+                {data.eventLocation}
+              </p>
+            )}
             <p className="flex items-center gap-2">
               <Mail className="h-4 w-4 text-muted-foreground" />
               {data.email}

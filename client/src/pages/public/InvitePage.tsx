@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useParams } from "react-router-dom"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { Calendar, Users, MailCheck } from "lucide-react"
+import { Calendar, MapPin, Users, MailCheck } from "lucide-react"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -61,6 +61,12 @@ export function InvitePage() {
             <Calendar className="h-4 w-4" />
             {formatDate(event.date)}
           </span>
+          {event.location && (
+            <span className="flex items-center gap-1">
+              <MapPin className="h-4 w-4" />
+              {event.location}
+            </span>
+          )}
         </div>
         {event.description && (
           <p className="mx-auto mt-2 max-w-prose text-sm text-muted-foreground">

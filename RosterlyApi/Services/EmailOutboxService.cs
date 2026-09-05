@@ -21,7 +21,7 @@ public class EmailOutboxService
         _logger = logger;
     }
 
-    public async Task EnqueueAsync(string to, string subject, string htmlBody, string? textBody = null, CancellationToken ct = default)
+    public async Task EnqueueAsync(string to, string subject, string htmlBody, string? textBody = null, EmailAttachment? attachment = null, CancellationToken ct = default)
     {
         _db.EmailMessages.Add(new EmailMessage
         {
@@ -30,6 +30,9 @@ public class EmailOutboxService
             Subject = subject,
             HtmlBody = htmlBody,
             TextBody = textBody,
+            AttachmentFileName = attachment?.FileName,
+            AttachmentContentType = attachment?.ContentType,
+            AttachmentContent = attachment?.Content,
             CreatedAt = DateTime.UtcNow
         });
         await _db.SaveChangesAsync(ct);
@@ -47,7 +50,13 @@ public class EmailOutboxService
         {
             try
             {
-                await _emailSender.SendAsync(message.To, message.Subject, message.HtmlBody, message.TextBody, ct);
+                var attachment = message.AttachmentContent is null || message.AttachmentFileName is null
+                    ? null
+                    : new EmailAttachment(
+                        message.AttachmentFileName,
+                        message.AttachmentContentType ?? "application/octet-stream",
+                        message.AttachmentContent);
+                await _emailSender.SendAsync(message.To, message.Subject, message.HtmlBody, message.TextBody, attachment, ct);
                 message.Sent = true;
                 message.SentAt = DateTime.UtcNow;
             }

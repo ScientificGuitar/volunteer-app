@@ -103,7 +103,12 @@ export function createAdminApi(getToken: () => Promise<string | null>) {
 
     updateEvent: async (
       eventId: string,
-      data: { title?: string; description?: string | null; date?: string }
+      data: {
+        title?: string
+        description?: string | null
+        location?: string | null
+        date?: string
+      }
     ) => {
       const res = await fetch(`${BASE}/events/${eventId}`, {
         method: "PUT",

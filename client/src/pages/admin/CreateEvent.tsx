@@ -24,6 +24,7 @@ export function CreateEvent() {
   const queryClient = useQueryClient()
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
+  const [location, setLocation] = useState("")
   const [date, setDate] = useState("")
   const [slots, setSlots] = useState<SlotRow[]>([])
   const [submitting, setSubmitting] = useState(false)
@@ -82,6 +83,7 @@ export function CreateEvent() {
       await api.createEvent(org.id, {
         title,
         description: description || null,
+        location: location.trim() || null,
         date,
         slots:
           slots.length > 0
@@ -126,6 +128,17 @@ export function CreateEvent() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Weekly Sunday service"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="location">Location (optional)</Label>
+          <Input
+            id="location"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            placeholder="123 Main St, Springfield"
+            maxLength={500}
           />
         </div>
 

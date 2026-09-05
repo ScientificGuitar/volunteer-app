@@ -1070,6 +1070,7 @@ export interface components {
         CreateEventRequest: {
             title: string;
             description: null | string;
+            location: null | string;
             /** Format: date */
             date: string;
             slots: null | components["schemas"]["CreateSlotRequest"][];
@@ -1091,6 +1092,7 @@ export interface components {
             id: string;
             title: string;
             description: null | string;
+            location: null | string;
             /** Format: date */
             date: string;
             slots: components["schemas"]["SlotAvailabilityResponse"][];
@@ -1102,6 +1104,7 @@ export interface components {
             organizationId: string;
             title: string;
             description: null | string;
+            location: null | string;
             /** Format: date */
             date: string;
             /** Format: date-time */
@@ -1114,6 +1117,7 @@ export interface components {
             organizationId: string;
             title: string;
             description: null | string;
+            location: null | string;
             /** Format: date */
             date: string;
             /** Format: date-time */
@@ -1171,6 +1175,7 @@ export interface components {
             id: string;
             title: string;
             description: null | string;
+            location: null | string;
             /** Format: date */
             date: string;
             slots: components["schemas"]["RosterSlotResponse"][];
@@ -1197,6 +1202,7 @@ export interface components {
             confirmedAt: null | string;
             organizationName: string;
             eventTitle: string;
+            eventLocation: null | string;
             /** Format: date */
             eventDate: string;
             slotLabel: string;
@@ -1248,6 +1254,7 @@ export interface components {
         UpdateEventRequest: {
             title: null | string;
             description: null | string;
+            location: null | string;
             /** Format: date */
             date: null | string;
         };

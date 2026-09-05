@@ -11,9 +11,39 @@ public static class EmailTemplates
         DateOnly eventDate,
         TimeOnly startTime,
         TimeOnly endTime,
-        string manageUrl)
+        string manageUrl,
+        string? location = null,
+        CalendarInviteBuilder.CalendarLinks? calendarLinks = null,
+        bool hasCalendarAttachment = false)
     {
         var subject = $"Confirm your signup: {eventTitle}";
+        var encodedLocation = string.IsNullOrWhiteSpace(location)
+            ? null
+            : HttpUtility.HtmlEncode(location.Trim());
+
+        var locationHtml = encodedLocation is null
+            ? ""
+            : $"""
+                <p style="margin:8px 0 0;font-size:14px;color:#3f3f46;">📍 {encodedLocation}</p>
+                """;
+
+        var calendarHtml = calendarLinks is null
+            ? ""
+            : $"""
+                <tr>
+                  <td style="padding:0 32px 8px;">
+                    <p style="margin:0 0 8px;font-size:14px;color:#3f3f46;">Add it to your calendar:</p>
+                    <p style="margin:0;font-size:14px;">
+                      <a href="{HttpUtility.HtmlEncode(calendarLinks.Google)}" style="color:#18181b;">Google</a>
+                      <span style="color:#a1a1aa;">&nbsp;·&nbsp;</span>
+                      <a href="{HttpUtility.HtmlEncode(calendarLinks.Outlook)}" style="color:#18181b;">Outlook</a>
+                      <span style="color:#a1a1aa;">&nbsp;·&nbsp;</span>
+                      <a href="{HttpUtility.HtmlEncode(calendarLinks.Yahoo)}" style="color:#18181b;">Yahoo</a>
+                    </p>
+                    {(hasCalendarAttachment ? """<p style="margin:8px 0 0;font-size:13px;color:#71717a;">An .ics invite is also attached to this email.</p>""" : "")}
+                  </td>
+                </tr>
+                """;
 
         var html = $"""
             <!DOCTYPE html>
@@ -38,12 +68,14 @@ public static class EmailTemplates
                               <td style="padding:16px;">
                                 <p style="margin:0 0 4px;font-size:14px;color:#18181b;"><strong>{eventDate:dddd d MMMM yyyy}</strong></p>
                                 <p style="margin:0;font-size:14px;color:#3f3f46;">{startTime:HH:mm}&ndash;{endTime:HH:mm}</p>
+                                {locationHtml}
                                 <p style="margin:12px 0 0;font-size:14px;color:#3f3f46;">Name: <strong>{HttpUtility.HtmlEncode(volunteerName)}</strong></p>
                               </td>
                             </tr>
                           </table>
                         </td>
                       </tr>
+                      {calendarHtml}
                       <tr>
                         <td style="padding:24px 32px 32px;">
                           <a href="{HttpUtility.HtmlEncode(manageUrl)}" style="display:inline-block;background-color:#18181b;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:12px 24px;border-radius:8px;">Confirm my signup</a>
@@ -60,16 +92,25 @@ public static class EmailTemplates
             </html>
             """;
 
+        var textLocation = string.IsNullOrWhiteSpace(location) ? "" : $"\nLocation: {location.Trim()}";
+        var textCalendar = calendarLinks is null ? "" : $"""
+
+            Add it to your calendar:
+            Google: {calendarLinks.Google}
+            Outlook: {calendarLinks.Outlook}
+            Yahoo: {calendarLinks.Yahoo}
+            """ + (hasCalendarAttachment ? "\nAn .ics invite is also attached to this email." : "");
+
         var text = $"""
             {organizationName}
 
             Confirm your signup for: {eventTitle}
-            {eventDate:dddd d MMMM yyyy}, {startTime:HH:mm}–{endTime:HH:mm}
+            {eventDate:dddd d MMMM yyyy}, {startTime:HH:mm}–{endTime:HH:mm}{textLocation}
             Name: {volunteerName}
 
             Your spot isn't confirmed until you click the link below:
 
-            {manageUrl}
+            {manageUrl}{textCalendar}
 
             Afterwards, you can use this link anytime to view or cancel your signup.
             """;

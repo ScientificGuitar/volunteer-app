@@ -30,6 +30,7 @@ public class AppDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Title).HasMaxLength(300).IsRequired();
             entity.Property(e => e.Description).HasMaxLength(2000);
+            entity.Property(e => e.Location).HasMaxLength(500);
             entity.HasOne(e => e.Organization)
                 .WithMany(o => o.Events)
                 .HasForeignKey(e => e.OrganizationId)
@@ -73,6 +74,8 @@ public class AppDbContext : DbContext
             entity.Property(e => e.To).HasMaxLength(320).IsRequired();
             entity.Property(e => e.Subject).HasMaxLength(500).IsRequired();
             entity.Property(e => e.HtmlBody).IsRequired();
+            entity.Property(e => e.AttachmentFileName).HasMaxLength(255);
+            entity.Property(e => e.AttachmentContentType).HasMaxLength(100);
             entity.HasIndex(e => e.Sent);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
         });

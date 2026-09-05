@@ -9,6 +9,7 @@ import {
   Plus,
   Power,
   Pencil,
+  MapPin,
 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -107,6 +108,12 @@ export function EventDetail() {
         <div className="flex-1">
           <h1 className="text-2xl font-bold">{event.title}</h1>
           <p className="text-sm text-muted-foreground">{event.date}</p>
+          {event.location && (
+            <p className="flex items-center gap-1 text-sm text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5" />
+              {event.location}
+            </p>
+          )}
         </div>
         <Button
           variant="outline"
@@ -192,6 +199,7 @@ export function EventDetail() {
                   <thead>
                     <tr className="border-b text-left text-muted-foreground">
                       <th className="pb-1 font-medium">Volunteer</th>
+                      <th className="pb-1 font-medium">Email</th>
                       <th className="pb-1 font-medium">Signed up</th>
                       <th className="pb-1 font-medium">Status</th>
                       <th className="w-10 pb-1" />
@@ -201,6 +209,9 @@ export function EventDetail() {
                     {slot.signups.map((s) => (
                       <tr key={s.id} className="border-b last:border-0">
                         <td className="py-1">{s.volunteerName}</td>
+                        <td className="py-1 break-all text-muted-foreground">
+                          {s.email}
+                        </td>
                         <td className="py-1 text-muted-foreground">
                           {new Date(s.createdAt).toLocaleString()}
                         </td>

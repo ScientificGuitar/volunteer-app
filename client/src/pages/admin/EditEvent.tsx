@@ -58,6 +58,7 @@ function EventForm({ event, eventId }: EventFormProps) {
 
   const [title, setTitle] = useState(event.title)
   const [description, setDescription] = useState(event.description ?? "")
+  const [location, setLocation] = useState(event.location ?? "")
   const [date, setDate] = useState(event.date)
   const [submitting, setSubmitting] = useState(false)
 
@@ -90,6 +91,8 @@ function EventForm({ event, eventId }: EventFormProps) {
       await api.updateEvent(eventId, {
         title,
         description: description || null,
+        // Empty string clears the location; the backend normalizes it to null.
+        location: location.trim(),
         date,
       })
       await invalidateEvent()
@@ -213,6 +216,17 @@ function EventForm({ event, eventId }: EventFormProps) {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Weekly Sunday service"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="location">Location (optional)</Label>
+            <Input
+              id="location"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="123 Main St, Springfield"
+              maxLength={500}
             />
           </div>
 

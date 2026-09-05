@@ -160,6 +160,7 @@ public static class AdminEndpoints
             OrganizationId = orgId,
             Title = request.Title,
             Description = request.Description,
+            Location = request.Location,
             Date = request.Date,
             CreatedAt = DateTime.UtcNow
         };
@@ -186,7 +187,7 @@ public static class AdminEndpoints
         await db.SaveChangesAsync(ct);
 
         return Results.Created($"/api/events/{evt.Id}", new EventResponse(
-            evt.Id, evt.OrganizationId, evt.Title, evt.Description, evt.Date, evt.CreatedAt
+            evt.Id, evt.OrganizationId, evt.Title, evt.Description, evt.Location, evt.Date, evt.CreatedAt
         ));
     }
 
@@ -204,7 +205,7 @@ public static class AdminEndpoints
             .ToListAsync(ct);
 
         return Results.Ok(events.Select(e => new EventWithSlotsResponse(
-            e.Id, e.OrganizationId, e.Title, e.Description, e.Date, e.CreatedAt,
+            e.Id, e.OrganizationId, e.Title, e.Description, e.Location, e.Date, e.CreatedAt,
             e.TimeSlots.OrderBy(s => s.StartTime).Select(s => new TimeSlotResponse(s.Id, s.EventId, s.Label, e.Date.ToDateTime(s.StartTime), e.Date.ToDateTime(s.EndTime), s.Capacity, s.Signups.Count(sg => sg.Status != SignupStatus.Cancelled)))
         )));
     }
@@ -218,13 +219,17 @@ public static class AdminEndpoints
 
         if (evt is null) return Results.NotFound();
 
-        if (request.Title is not null) evt.Title = request.Title;
-        if (request.Description is not null) evt.Description = request.Description;
+        if (request.Title is not null)
+            evt.Title = request.Title;
+        if (request.Description is not null)
+            evt.Description = request.Description;
+        if (request.Location is not null)
+            evt.Location = string.IsNullOrWhiteSpace(request.Location) ? null : request.Location;
         if (request.Date is not null) evt.Date = request.Date.Value;
 
         await db.SaveChangesAsync(ct);
 
-        return Results.Ok(new EventResponse(evt.Id, evt.OrganizationId, evt.Title, evt.Description, evt.Date, evt.CreatedAt));
+        return Results.Ok(new EventResponse(evt.Id, evt.OrganizationId, evt.Title, evt.Description, evt.Location, evt.Date, evt.CreatedAt));
     }
 
     private static async Task<IResult> DeleteEvent(Guid id, AppDbContext db, HttpContext http, CancellationToken ct)
@@ -339,7 +344,7 @@ public static class AdminEndpoints
             .ToListAsync(ct);
 
         return Results.Ok(events.Select(e => new RosterEventResponse(
-            e.Id, e.Title, e.Description, e.Date,
+            e.Id, e.Title, e.Description, e.Location, e.Date,
             e.TimeSlots.OrderBy(s => s.StartTime).Select(s => new RosterSlotResponse(
                 s.Id, s.Label, e.Date.ToDateTime(s.StartTime), e.Date.ToDateTime(s.EndTime), s.Capacity,
                 s.Signups.Select(su => new SignupResponse(su.Id, su.TimeSlotId, su.VolunteerName, su.Email, su.Status.ToString(), su.CreatedAt))
@@ -377,7 +382,7 @@ public static class AdminEndpoints
         if (evt is null) return Results.NotFound();
 
         return Results.Ok(new RosterEventResponse(
-            evt.Id, evt.Title, evt.Description, evt.Date,
+            evt.Id, evt.Title, evt.Description, evt.Location, evt.Date,
             evt.TimeSlots.OrderBy(s => s.StartTime).Select(s => new RosterSlotResponse(
                 s.Id, s.Label, evt.Date.ToDateTime(s.StartTime), evt.Date.ToDateTime(s.EndTime), s.Capacity,
                 s.Signups.Select(su => new SignupResponse(su.Id, su.TimeSlotId, su.VolunteerName, su.Email, su.Status.ToString(), su.CreatedAt))
@@ -463,6 +468,7 @@ public record CreateOrganizationRequest(
 public record CreateEventRequest(
     [property: Required, NotWhitespace, StringLength(300)] string Title,
     [property: NotWhitespace, StringLength(2000)] string? Description,
+    [property: NotWhitespace, StringLength(500)] string? Location,
     DateOnly Date,
     [property: MaxLength(50)] List<CreateSlotRequest>? Slots) : IValidatableObject
 {
@@ -480,6 +486,7 @@ public record CreateEventRequest(
 public record UpdateEventRequest(
     [property: NotWhitespace, StringLength(300)] string? Title,
     [property: NotWhitespace, StringLength(2000)] string? Description,
+    [property: StringLength(500)] string? Location,
     DateOnly? Date) : IValidatableObject
 {
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
@@ -522,13 +529,13 @@ public record OrganizationResponse(Guid Id, string Name, DateTime CreatedAt);
 
 public record InviteLinkResponse(Guid Id, Guid? EventId, string Code, bool IsActive, DateTime CreatedAt, DateTime? ExpiresAt);
 
-public record EventResponse(Guid Id, Guid OrganizationId, string Title, string? Description, DateOnly Date, DateTime CreatedAt);
+public record EventResponse(Guid Id, Guid OrganizationId, string Title, string? Description, string? Location, DateOnly Date, DateTime CreatedAt);
 
-public record EventWithSlotsResponse(Guid Id, Guid OrganizationId, string Title, string? Description, DateOnly Date, DateTime CreatedAt, IEnumerable<TimeSlotResponse> Slots);
+public record EventWithSlotsResponse(Guid Id, Guid OrganizationId, string Title, string? Description, string? Location, DateOnly Date, DateTime CreatedAt, IEnumerable<TimeSlotResponse> Slots);
 
 public record TimeSlotResponse(Guid Id, Guid EventId, string Label, DateTime StartTime, DateTime EndTime, int Capacity, int SignupCount);
 
-public record RosterEventResponse(Guid Id, string Title, string? Description, DateOnly Date, IEnumerable<RosterSlotResponse> Slots);
+public record RosterEventResponse(Guid Id, string Title, string? Description, string? Location, DateOnly Date, IEnumerable<RosterSlotResponse> Slots);
 
 public record RosterSlotResponse(Guid Id, string Label, DateTime StartTime, DateTime EndTime, int Capacity, IEnumerable<SignupResponse> Signups);
 
