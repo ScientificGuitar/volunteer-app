@@ -6,15 +6,7 @@ import { useOrg } from "@/hooks/useOrg"
 import { useApi } from "@/hooks/useApi"
 import { WeeklyGrid } from "@/components/admin/WeeklyGrid"
 import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 export function Dashboard() {
   const { org, loading, error: orgError } = useOrg()
@@ -139,38 +131,30 @@ export function Dashboard() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">{org.name}</h1>
-        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="destructive" size="sm">
-              Delete Organization
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Delete organization?</DialogTitle>
-              <DialogDescription>
-                This will permanently delete &ldquo;{org.name}&rdquo; and all
-                associated events, slots, and signups. This action cannot be
-                undone.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setDeleteDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                disabled={deleting}
-                onClick={handleDeleteOrganization}
-              >
-                {deleting ? "Deleting..." : "Delete"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={() => setDeleteDialogOpen(true)}
+        >
+          Delete Organization
+        </Button>
+        <ConfirmDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          title="Delete organization?"
+          description={
+            <>
+              This will permanently delete &ldquo;{org.name}&rdquo; and all
+              associated events, slots, and signups. This action cannot be
+              undone.
+            </>
+          }
+          confirmLabel="Delete"
+          variant="destructive"
+          isLoading={deleting}
+          loadingLabel="Deleting..."
+          onConfirm={handleDeleteOrganization}
+        />
       </div>
       <WeeklyGrid orgId={org.id} />
     </div>

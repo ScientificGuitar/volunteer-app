@@ -23,15 +23,7 @@ import {
 } from "@/lib/csv"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useOrg } from "@/hooks/useOrg"
 import { useEvent } from "@/hooks/useEvent"
 import { useDeleteSignup } from "@/hooks/useDeleteSignup"
@@ -43,6 +35,8 @@ export function EventDetail() {
   const { org, loading: orgLoading, error: orgError } = useOrg()
   const { data: event, isLoading, error } = useEvent(org && id ? id : undefined)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deletingEvent, setDeletingEvent] = useState(false)
+  const [pendingSignupId, setPendingSignupId] = useState<string | null>(null)
   const deleteSignup = useDeleteSignup()
   const api = useApi()
   const navigate = useNavigate()
@@ -51,6 +45,7 @@ export function EventDetail() {
     try {
       await deleteSignup.mutateAsync(signupId)
       toast.success("Signup removed")
+      setPendingSignupId(null)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to delete signup")
     }
@@ -58,12 +53,16 @@ export function EventDetail() {
 
   const handleDeleteEvent = async () => {
     if (!id) return
+    setDeletingEvent(true)
     try {
       await api.deleteEvent(id)
       toast.success("Event deleted")
+      setDeleteDialogOpen(false)
       navigate("/dashboard")
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to delete event")
+    } finally {
+      setDeletingEvent(false)
     }
   }
 
@@ -157,40 +156,46 @@ export function EventDetail() {
           <Pencil className="mr-1 h-3 w-3" />
           Edit
         </Button>
-        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="destructive" size="sm">
-              Delete Event
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Delete event?</DialogTitle>
-              <DialogDescription>
-                This will permanently delete &ldquo;{event.title}&rdquo; and all
-                associated signups. This action cannot be undone.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setDeleteDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={() => {
-                  setDeleteDialogOpen(false)
-                  handleDeleteEvent()
-                }}
-              >
-                Delete
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={() => setDeleteDialogOpen(true)}
+        >
+          Delete Event
+        </Button>
+        <ConfirmDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          title="Delete event?"
+          description={
+            <>
+              This will permanently delete &ldquo;{event.title}&rdquo; and all
+              associated signups. This action cannot be undone.
+            </>
+          }
+          confirmLabel="Delete"
+          variant="destructive"
+          isLoading={deletingEvent}
+          loadingLabel="Deleting..."
+          onConfirm={handleDeleteEvent}
+        />
       </div>
+
+      <ConfirmDialog
+        open={pendingSignupId !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingSignupId(null)
+        }}
+        title="Remove signup?"
+        description="This will remove the volunteer from this slot. This action cannot be undone."
+        confirmLabel="Remove"
+        variant="destructive"
+        isLoading={deleteSignup.isPending}
+        loadingLabel="Removing..."
+        onConfirm={() => {
+          if (pendingSignupId) handleDeleteSignup(pendingSignupId)
+        }}
+      />
 
       <InviteLinkSection eventId={event.id} />
 
@@ -257,7 +262,7 @@ export function EventDetail() {
                             variant="ghost"
                             size="icon"
                             className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                            onClick={() => handleDeleteSignup(s.id)}
+                            onClick={() => setPendingSignupId(s.id)}
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -283,6 +288,8 @@ function InviteLinkSection({ eventId }: InviteLinkSectionProps) {
   const api = useApi()
   const queryClient = useQueryClient()
   const [generating, setGenerating] = useState(false)
+  const [pendingLink, setPendingLink] = useState<InviteLink | null>(null)
+  const [revoking, setRevoking] = useState(false)
 
   const { data: links, isLoading } = useQuery({
     queryKey: ["inviteLinks", eventId],
@@ -310,19 +317,18 @@ function InviteLinkSection({ eventId }: InviteLinkSectionProps) {
     toast.success("Link copied")
   }
 
-  const handleRevoke = async (link: InviteLink) => {
-    if (
-      !confirm(
-        "Revoke this invite link? Volunteers using it will see an invalid link."
-      )
-    )
-      return
+  const handleRevoke = async () => {
+    if (!pendingLink) return
+    setRevoking(true)
     try {
-      await api.revokeInviteLink(link.id)
+      await api.revokeInviteLink(pendingLink.id)
       toast.success("Invite link revoked")
+      setPendingLink(null)
       queryClient.invalidateQueries({ queryKey: ["inviteLinks", eventId] })
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to revoke link")
+    } finally {
+      setRevoking(false)
     }
   }
 
@@ -377,7 +383,7 @@ function InviteLinkSection({ eventId }: InviteLinkSectionProps) {
               variant="ghost"
               size="icon"
               className="h-8 w-8 shrink-0"
-              onClick={() => handleRevoke(link)}
+              onClick={() => setPendingLink(link)}
               title="Revoke"
               disabled={!link.isActive}
             >
@@ -386,6 +392,19 @@ function InviteLinkSection({ eventId }: InviteLinkSectionProps) {
           </div>
         ))}
       </CardContent>
+      <ConfirmDialog
+        open={pendingLink !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingLink(null)
+        }}
+        title="Revoke invite link?"
+        description="Volunteers using it will see an invalid link. This action cannot be undone."
+        confirmLabel="Revoke"
+        variant="destructive"
+        isLoading={revoking}
+        loadingLabel="Revoking..."
+        onConfirm={handleRevoke}
+      />
     </Card>
   )
 }

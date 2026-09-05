@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useEvent } from "@/hooks/useEvent"
 import { useApi } from "@/hooks/useApi"
 import { formatTime, toTimeInputValue } from "@/lib/utils"
@@ -71,6 +72,8 @@ function EventForm({ event, eventId }: EventFormProps) {
   })
   const [showAddSlot, setShowAddSlot] = useState(false)
   const [slotSubmitting, setSlotSubmitting] = useState(false)
+  const [pendingSlot, setPendingSlot] = useState<RosterSlot | null>(null)
+  const [deletingSlot, setDeletingSlot] = useState(false)
 
   const invalidateEvent = () =>
     queryClient.invalidateQueries({ queryKey: ["event", eventId] })
@@ -146,23 +149,20 @@ function EventForm({ event, eventId }: EventFormProps) {
     }
   }
 
-  const handleDeleteSlot = async (slot: RosterSlot) => {
-    const confirmMsg =
-      slot.signups.length > 0
-        ? `Delete "${slot.label}"? This will also remove ${slot.signups.length} signup(s).`
-        : `Delete "${slot.label}"?`
-    if (!confirm(confirmMsg)) return
+  const handleDeleteSlot = async () => {
+    if (!pendingSlot) return
 
-    setSlotSubmitting(true)
+    setDeletingSlot(true)
     try {
-      await api.deleteSlot(eventId, slot.id)
+      await api.deleteSlot(eventId, pendingSlot.id)
       await invalidateEvent()
       toast.success("Slot deleted")
+      setPendingSlot(null)
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to delete slot"
       toast.error(msg)
     } finally {
-      setSlotSubmitting(false)
+      setDeletingSlot(false)
     }
   }
 
@@ -320,8 +320,8 @@ function EventForm({ event, eventId }: EventFormProps) {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      onClick={() => handleDeleteSlot(slot)}
-                      disabled={slotSubmitting}
+                      onClick={() => setPendingSlot(slot)}
+                      disabled={slotSubmitting || deletingSlot}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -345,6 +345,26 @@ function EventForm({ event, eventId }: EventFormProps) {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={pendingSlot !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingSlot(null)
+        }}
+        title={
+          pendingSlot ? `Delete "${pendingSlot.label}"?` : "Delete slot?"
+        }
+        description={
+          pendingSlot && pendingSlot.signups.length > 0
+            ? `This will also remove ${pendingSlot.signups.length} signup(s). This action cannot be undone.`
+            : "This action cannot be undone."
+        }
+        confirmLabel="Delete"
+        variant="destructive"
+        isLoading={deletingSlot}
+        loadingLabel="Deleting..."
+        onConfirm={handleDeleteSlot}
+      />
     </div>
   )
 }
