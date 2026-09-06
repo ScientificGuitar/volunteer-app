@@ -18,6 +18,7 @@ import { CreateEvent } from "@/pages/admin/CreateEvent"
 import { EventDetail } from "@/pages/admin/EventDetail"
 import { EditEvent } from "@/pages/admin/EditEvent"
 import { InvitePage } from "@/pages/public/InvitePage"
+import { LandingPage } from "@/pages/public/LandingPage"
 import { SignupManagePage } from "@/pages/public/SignupManagePage"
 import { cn } from "@/lib/utils"
 import { useOrg } from "@/hooks/useOrg"
@@ -115,19 +116,6 @@ function Header() {
   )
 }
 
-function WelcomeScreen() {
-  return (
-    <div className="flex flex-1 items-center justify-center p-6">
-      <div className="max-w-md text-center">
-        <h1 className="mb-2 text-2xl font-bold">Welcome to Rosterly</h1>
-        <p className="text-muted-foreground">
-          Sign in to manage your organization&rsquo;s volunteer scheduling.
-        </p>
-      </div>
-    </div>
-  )
-}
-
 function RequireAuth() {
   const { isLoaded, isSignedIn } = useAuth()
 
@@ -143,7 +131,35 @@ function HomeRoute() {
   if (!isLoaded) return null
   if (isSignedIn) return <Navigate to="/dashboard" replace />
 
-  return <WelcomeScreen />
+  return <LandingPage />
+}
+
+function Shell() {
+  const location = useLocation()
+  const { isSignedIn } = useAuth()
+  // Signed-out users only ever see the landing page (auth routes redirect
+  // to "/"), the invite page, or the signup-manage page.
+  const isLanding =
+    !isSignedIn &&
+    !location.pathname.startsWith("/invite") &&
+    !location.pathname.startsWith("/signup")
+
+  return (
+    <main className={cn("flex-1", !isLanding && "p-6")}>
+      <Routes>
+        <Route path="/invite/:code" element={<InvitePage />} />
+        <Route path="/signup/manage/:token" element={<SignupManagePage />} />
+        <Route path="/" element={<HomeRoute />} />
+        <Route element={<RequireAuth />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/events/new" element={<CreateEvent />} />
+          <Route path="/events/:id" element={<EventDetail />} />
+          <Route path="/events/:id/edit" element={<EditEventWrapper />} />
+        </Route>
+        <Route path="*" element={<HomeRoute />} />
+      </Routes>
+    </main>
+  )
 }
 
 export function App() {
@@ -151,20 +167,7 @@ export function App() {
     <div className="flex min-h-svh flex-col">
       <Toaster richColors position="top-right" />
       <Header />
-      <main className="flex-1 p-6">
-        <Routes>
-          <Route path="/invite/:code" element={<InvitePage />} />
-          <Route path="/signup/manage/:token" element={<SignupManagePage />} />
-          <Route path="/" element={<HomeRoute />} />
-          <Route element={<RequireAuth />}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/events/new" element={<CreateEvent />} />
-            <Route path="/events/:id" element={<EventDetail />} />
-            <Route path="/events/:id/edit" element={<EditEventWrapper />} />
-          </Route>
-          <Route path="*" element={<HomeRoute />} />
-        </Routes>
-      </main>
+      <Shell />
     </div>
   )
 }
