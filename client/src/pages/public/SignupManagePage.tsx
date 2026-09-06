@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Separator } from "@/components/ui/separator"
 import { createPublicApi } from "@/lib/api"
 
@@ -15,6 +16,7 @@ export function SignupManagePage() {
   const { token } = useParams<{ token: string }>()
   const [cancelled, setCancelled] = useState(false)
   const [cancelling, setCancelling] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["signup-manage", token],
@@ -56,6 +58,7 @@ export function SignupManagePage() {
     try {
       await api.cancelSignup(token!)
       setCancelled(true)
+      setConfirmOpen(false)
       toast.success("Your signup has been cancelled.")
     } catch (err) {
       toast.error(
@@ -132,14 +135,28 @@ export function SignupManagePage() {
               You&rsquo;ve cancelled this signup. Your spot has been released.
             </div>
           ) : (
-            <Button
-              variant="destructive"
-              className="w-full"
-              disabled={cancelling}
-              onClick={handleCancel}
-            >
-              {cancelling ? "Cancelling..." : "Cancel signup"}
-            </Button>
+            <>
+              <Button
+                variant="destructive"
+                className="w-full"
+                disabled={cancelling}
+                onClick={() => setConfirmOpen(true)}
+              >
+                Cancel signup
+              </Button>
+              <ConfirmDialog
+                open={confirmOpen}
+                onOpenChange={setConfirmOpen}
+                title="Cancel signup?"
+                description="This will release your spot for this shift. This action cannot be undone."
+                confirmLabel="Yes, cancel signup"
+                cancelLabel="Keep my spot"
+                variant="destructive"
+                isLoading={cancelling}
+                loadingLabel="Cancelling..."
+                onConfirm={handleCancel}
+              />
+            </>
           )}
         </CardContent>
       </Card>
