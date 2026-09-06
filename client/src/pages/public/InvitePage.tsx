@@ -240,9 +240,7 @@ function SignupForm({ slots, code }: { slots: PublicSlot[]; code: string }) {
                       </span>
                     </span>
                     <Badge variant={slot.isFull ? "destructive" : "secondary"}>
-                      {slot.isFull
-                        ? "Full"
-                        : `${slot.signupCount}/${slot.capacity}`}
+                      {`${slot.signupCount}/${slot.capacity}`}
                     </Badge>
                   </div>
                   <div className="mt-2">
