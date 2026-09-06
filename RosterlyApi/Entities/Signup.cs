@@ -9,6 +9,7 @@ public class Signup
     public SignupStatus Status { get; set; } = SignupStatus.Pending;
     public string ManagementTokenHash { get; set; } = string.Empty;
     public DateTime? ConfirmedAt { get; set; }
+    public DateTime? ReminderSentAt { get; set; }
     public DateTime CreatedAt { get; set; }
 
     public TimeSlot TimeSlot { get; set; } = null!;

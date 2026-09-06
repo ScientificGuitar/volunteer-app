@@ -47,6 +47,10 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
                 .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, TestAuthHandler>("Test", null);
 
             services.AddAuthorization();
+
+            // Keep the reminder sweep deterministic in tests: individual tests
+            // invoke SignupReminderService directly.
+            services.Configure<RosterlyApi.Services.ReminderOptions>(o => o.Enabled = false);
         });
     }
 

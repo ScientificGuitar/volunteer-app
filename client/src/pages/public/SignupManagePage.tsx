@@ -36,7 +36,13 @@ export function SignupManagePage() {
       <div className="mx-auto max-w-md py-16 text-center">
         <h1 className="mb-2 text-2xl font-bold">Invalid link</h1>
         <p className="text-muted-foreground">
-          This signup link is invalid or no longer exists.
+          This signup link is invalid or has expired.
+        </p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Links stop working when a newer one is issued &mdash; for example,
+          if you re-sent your confirmation or received a reminder email (sent
+          about 24 hours before your shift). Please open the newest email from
+          us and use the link inside it.
         </p>
       </div>
     )

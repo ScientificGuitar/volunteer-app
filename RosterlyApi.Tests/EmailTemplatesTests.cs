@@ -29,6 +29,25 @@ public class EmailTemplatesTests
     }
 
     [Fact]
+    public void BuildSignupReminder_IncludesDetailsAndManageLinkWithoutCalendar()
+    {
+        var (subject, html, text) = EmailTemplates.BuildSignupReminder(
+            "Jane", "My Org", "Sunday Service",
+            new DateOnly(2026, 9, 6),
+            new TimeOnly(8, 0), new TimeOnly(9, 0),
+            "https://example.com/signup/manage/token123",
+            "123 Main St");
+
+        Assert.Contains("Sunday Service", subject);
+        Assert.Contains("123 Main St", html);
+        Assert.Contains("Location: 123 Main St", text);
+        Assert.Contains("https://example.com/signup/manage/token123", html);
+        Assert.Contains("https://example.com/signup/manage/token123", text);
+        Assert.DoesNotContain("calendar.google.com", html);
+        Assert.DoesNotContain("calendar.google.com", text);
+    }
+
+    [Fact]
     public void BuildSignupConfirmation_WithoutLocationOrLinks_OmitsSections()
     {
         var (_, html, text) = EmailTemplates.BuildSignupConfirmation(

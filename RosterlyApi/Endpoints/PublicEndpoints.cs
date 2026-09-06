@@ -220,7 +220,7 @@ public static class PublicEndpoints
             .FirstOrDefaultAsync(s => s.ManagementTokenHash == hash, ct);
 
         if (signup is null || signup.TimeSlot.Event is null)
-            return Results.NotFound(new { error = "Signup link not found" });
+            return Results.NotFound(new { error = "Signup link not found", code = "invalid_manage_link" });
 
         if (signup.Status == SignupStatus.Pending)
         {
@@ -253,7 +253,7 @@ public static class PublicEndpoints
             .FirstOrDefaultAsync(s => s.ManagementTokenHash == hash, ct);
 
         if (signup is null)
-            return Results.NotFound(new { error = "Signup link not found" });
+            return Results.NotFound(new { error = "Signup link not found", code = "invalid_manage_link" });
 
         if (signup.Status == SignupStatus.Removed)
             return Results.Conflict(new

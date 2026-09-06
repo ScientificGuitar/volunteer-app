@@ -27,6 +27,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     ));
 
 builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("Email"));
+builder.Services.Configure<ReminderOptions>(builder.Configuration.GetSection("Reminder"));
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddResend(options =>
 {
     options.ApiToken = builder.Configuration["Resend:ApiKey"] ?? string.Empty;
@@ -34,7 +36,9 @@ builder.Services.AddResend(options =>
 });
 builder.Services.AddScoped<IEmailSender, ResendEmailSender>();
 builder.Services.AddScoped<EmailOutboxService>();
+builder.Services.AddScoped<SignupReminderService>();
 builder.Services.AddHostedService<EmailBackgroundService>();
+builder.Services.AddHostedService<ReminderBackgroundService>();
 
 var clerkIssuer = builder.Configuration["Clerk:Issuer"]
     ?? throw new InvalidOperationException("Clerk:Issuer is not configured");

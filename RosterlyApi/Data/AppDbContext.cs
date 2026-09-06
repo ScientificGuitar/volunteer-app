@@ -61,6 +61,7 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => new { e.Email, e.TimeSlotId })
                 .IsUnique()
                 .HasFilter("\"Status\" <> 'Cancelled' AND \"Status\" <> 'Removed'");
+            entity.HasIndex(e => new { e.Status, e.ReminderSentAt });
             entity.HasOne(s => s.TimeSlot)
                 .WithMany(o => o.Signups)
                 .HasForeignKey(s => s.TimeSlotId)

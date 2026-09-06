@@ -261,6 +261,15 @@ public class PublicEndpointTests : IClassFixture<IntegrationTestFactory>
     }
 
     [Fact]
+    public async Task GetSignupDetails_InvalidToken_ReturnsInvalidManageLinkCode()
+    {
+        var response = await _publicClient.GetAsync("/api/signup/manage/not-a-real-token");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        Assert.Equal("invalid_manage_link", body.GetProperty("code").GetString());
+    }
+
+    [Fact]
     public async Task CreateSignup_SlotFull_Returns409()
     {
         var (_, _, code) = await SeedInviteLinkAsync("Full Slot Org");
