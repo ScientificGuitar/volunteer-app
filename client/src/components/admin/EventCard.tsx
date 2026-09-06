@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom"
 import { MapPin } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { CapacityBar } from "@/components/ui/capacity-bar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { activeSignupCount, formatTime } from "@/lib/utils"
 import type { RosterEvent } from "@/lib/types"
@@ -36,7 +37,7 @@ export function EventCard({ event }: EventCardProps) {
           const count = activeSignupCount(slot.signups)
           return (
             <div key={slot.id} className="rounded-md border p-2 text-xs">
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="font-medium">{slot.label}</div>
                   <div className="text-muted-foreground">
@@ -50,6 +51,11 @@ export function EventCard({ event }: EventCardProps) {
                   {count}/{slot.capacity}
                 </Badge>
               </div>
+              <CapacityBar
+                filled={count}
+                capacity={slot.capacity}
+                className="mt-1.5 h-1.5"
+              />
             </div>
           )
         })}

@@ -12,6 +12,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { createPublicApi, ApiError } from "@/lib/api"
 import type { PublicSlot } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { CapacityBar } from "@/components/ui/capacity-bar"
 
 const api = createPublicApi()
 
@@ -212,10 +213,6 @@ function SignupForm({ slots, code }: { slots: PublicSlot[]; code: string }) {
           className="gap-2"
         >
           {slots.map((slot) => {
-            const percent =
-              slot.capacity > 0
-                ? Math.min(100, (slot.signupCount / slot.capacity) * 100)
-                : 0
             return (
               <Label
                 key={slot.id}
@@ -249,7 +246,10 @@ function SignupForm({ slots, code }: { slots: PublicSlot[]; code: string }) {
                     </Badge>
                   </div>
                   <div className="mt-2">
-                    <CapacityBar percent={percent} isFull={slot.isFull} />
+                    <CapacityBar
+                      filled={slot.signupCount}
+                      capacity={slot.capacity}
+                    />
                   </div>
                 </div>
               </Label>
@@ -313,27 +313,6 @@ function SignupForm({ slots, code }: { slots: PublicSlot[]; code: string }) {
         )}
       </CardContent>
     </Card>
-  )
-}
-
-function CapacityBar({
-  percent,
-  isFull,
-}: {
-  percent: number
-  isFull: boolean
-}) {
-  return (
-    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-      <div
-        className={
-          isFull
-            ? "h-full bg-red-500 transition-all"
-            : "h-full bg-primary transition-all"
-        }
-        style={{ width: `${percent}%` }}
-      />
-    </div>
   )
 }
 

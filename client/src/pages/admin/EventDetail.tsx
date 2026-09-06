@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { CapacityBar } from "@/components/ui/capacity-bar"
 import { activeSignupCount, formatTime } from "@/lib/utils"
 import {
   buildEventVolunteersCsv,
@@ -227,7 +228,11 @@ export function EventDetail() {
                 </Badge>
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-4 pt-3">
+            <CardContent className="space-y-3 p-4 pt-3">
+              <CapacityBar
+                filled={activeSignupCount(slot.signups)}
+                capacity={slot.capacity}
+              />
               {slot.signups.length === 0 && (
                 <p className="text-sm text-muted-foreground italic">
                   No signups yet
