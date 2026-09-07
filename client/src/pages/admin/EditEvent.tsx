@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { TimeInput } from "@/components/ui/time-input"
 import { useEvent } from "@/hooks/useEvent"
 import { useApi } from "@/hooks/useApi"
 import { formatTime, toTimeInputValue } from "@/lib/utils"
@@ -415,24 +416,20 @@ function SlotEditForm({
           className="h-8 text-sm"
         />
       </div>
-      <div className="w-20 space-y-1">
+      <div className="space-y-1">
         <Label className="text-xs">Start</Label>
-        <Input
-          type="time"
+        <TimeInput
           value={form.startTime}
-          onChange={(e) => updateField("startTime", e.target.value)}
-          required
-          className="h-8 text-sm"
+          onChange={(val) => updateField("startTime", val)}
+          size="sm"
         />
       </div>
-      <div className="w-20 space-y-1">
+      <div className="space-y-1">
         <Label className="text-xs">End</Label>
-        <Input
-          type="time"
+        <TimeInput
           value={form.endTime}
-          onChange={(e) => updateField("endTime", e.target.value)}
-          required
-          className="h-8 text-sm"
+          onChange={(val) => updateField("endTime", val)}
+          size="sm"
         />
       </div>
       <div className="w-16 space-y-1">

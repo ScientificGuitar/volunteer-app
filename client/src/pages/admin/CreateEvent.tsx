@@ -6,6 +6,7 @@ import { Plus, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { TimeInput } from "@/components/ui/time-input"
 import { useOrg } from "@/hooks/useOrg"
 import { useApi } from "@/hooks/useApi"
 
@@ -184,28 +185,20 @@ export function CreateEvent() {
                   className="h-8 text-sm"
                 />
               </div>
-              <div className="w-20 space-y-1">
+              <div className="space-y-1">
                 <Label className="text-xs">Start</Label>
-                <Input
-                  type="time"
+                <TimeInput
                   value={slot.startTime}
-                  onChange={(e) =>
-                    updateSlot(slot.key, "startTime", e.target.value)
-                  }
-                  required
-                  className="h-8 text-sm"
+                  onChange={(val) => updateSlot(slot.key, "startTime", val)}
+                  size="sm"
                 />
               </div>
-              <div className="w-20 space-y-1">
+              <div className="space-y-1">
                 <Label className="text-xs">End</Label>
-                <Input
-                  type="time"
+                <TimeInput
                   value={slot.endTime}
-                  onChange={(e) =>
-                    updateSlot(slot.key, "endTime", e.target.value)
-                  }
-                  required
-                  className="h-8 text-sm"
+                  onChange={(val) => updateSlot(slot.key, "endTime", val)}
+                  size="sm"
                 />
               </div>
               <div className="w-16 space-y-1">
