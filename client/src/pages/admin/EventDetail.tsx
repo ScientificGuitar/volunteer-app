@@ -41,6 +41,7 @@ export function EventDetail() {
   const deleteSignup = useDeleteSignup()
   const api = useApi()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   const handleDeleteSignup = async (signupId: string) => {
     try {
@@ -57,6 +58,8 @@ export function EventDetail() {
     setDeletingEvent(true)
     try {
       await api.deleteEvent(id)
+      await queryClient.invalidateQueries({ queryKey: ["roster"] })
+      await queryClient.invalidateQueries({ queryKey: ["event", id] })
       toast.success("Event deleted")
       setDeleteDialogOpen(false)
       navigate("/dashboard")

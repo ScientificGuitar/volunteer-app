@@ -76,7 +76,10 @@ function EventForm({ event, eventId }: EventFormProps) {
   const [deletingSlot, setDeletingSlot] = useState(false)
 
   const invalidateEvent = () =>
-    queryClient.invalidateQueries({ queryKey: ["event", eventId] })
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["event", eventId] }),
+      queryClient.invalidateQueries({ queryKey: ["roster"] }),
+    ])
 
   const validateSlotTimes = () => {
     if (slotForm.endTime <= slotForm.startTime) {
