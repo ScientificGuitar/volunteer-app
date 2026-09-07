@@ -21,7 +21,8 @@ public class SignupReminderServiceTests : IClassFixture<IntegrationTestFactory>
     {
         var start = DateTime.UtcNow.AddHours(20);
         var signupId = await SeedSignupAsync(
-            "reminder@example.com", "Reminded User", SignupStatus.Confirmed, start);
+            "reminder@example.com", "Reminded User", SignupStatus.Confirmed, start,
+            createdAt: DateTime.UtcNow.AddHours(-5));
 
         var enqueued = await RunReminderSweepAsync();
 
@@ -45,7 +46,8 @@ public class SignupReminderServiceTests : IClassFixture<IntegrationTestFactory>
     {
         var start = DateTime.UtcNow.AddHours(20);
         await SeedSignupAsync(
-            "once@example.com", "Once User", SignupStatus.Confirmed, start);
+            "once@example.com", "Once User", SignupStatus.Confirmed, start,
+            createdAt: DateTime.UtcNow.AddHours(-5));
 
         Assert.Equal(1, await RunReminderSweepAsync());
         Assert.Equal(0, await RunReminderSweepAsync());
@@ -103,6 +105,52 @@ public class SignupReminderServiceTests : IClassFixture<IntegrationTestFactory>
         Assert.Empty(db.EmailMessages.Where(m => m.To == "past@example.com"));
     }
 
+    [Fact]
+    public async Task EnqueueDueReminders_RecentlyCreatedSignup_SuppressedWithoutRotatingToken()
+    {
+        var start = DateTime.UtcNow.AddHours(20);
+        var signupId = await SeedSignupAsync(
+            "recent@example.com", "Recent User", SignupStatus.Confirmed, start,
+            createdAt: DateTime.UtcNow.AddHours(-1));
+
+        string originalHash;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            originalHash = (await db.Signups.SingleAsync(s => s.Id == signupId)).ManagementTokenHash;
+        }
+
+        var enqueued = await RunReminderSweepAsync();
+
+        Assert.Equal(0, enqueued);
+
+        using var scope2 = _factory.Services.CreateScope();
+        var db2 = scope2.ServiceProvider.GetRequiredService<AppDbContext>();
+        var signup = await db2.Signups.SingleAsync(s => s.Id == signupId);
+        // Suppressed forever: claimed so no later sweep retries, but token untouched.
+        Assert.NotNull(signup.ReminderSentAt);
+        Assert.Equal(originalHash, signup.ManagementTokenHash);
+        Assert.Empty(db2.EmailMessages.Where(m => m.To == "recent@example.com"));
+
+        // A second sweep still sends nothing.
+        Assert.Equal(0, await RunReminderSweepAsync());
+    }
+
+    [Fact]
+    public async Task EnqueueDueReminders_SignupOlderThanLeeway_SendsReminder()
+    {
+        var start = DateTime.UtcNow.AddHours(20);
+        await SeedSignupAsync(
+            "oldsignup@example.com", "Old Signup User", SignupStatus.Confirmed, start,
+            createdAt: DateTime.UtcNow.AddHours(-5));
+
+        Assert.Equal(1, await RunReminderSweepAsync());
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.NotEmpty(db.EmailMessages.Where(m => m.To == "oldsignup@example.com"));
+    }
+
     private async Task<int> RunReminderSweepAsync()
     {
         using var scope = _factory.Services.CreateScope();
@@ -111,7 +159,7 @@ public class SignupReminderServiceTests : IClassFixture<IntegrationTestFactory>
     }
 
     private async Task<Guid> SeedSignupAsync(
-        string email, string name, SignupStatus status, DateTime slotStartUtc)
+        string email, string name, SignupStatus status, DateTime slotStartUtc, DateTime? createdAt = null)
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -150,7 +198,7 @@ public class SignupReminderServiceTests : IClassFixture<IntegrationTestFactory>
             Status = status,
             ManagementTokenHash = TokenService.HashToken(TokenService.GenerateToken()),
             ConfirmedAt = status == SignupStatus.Confirmed ? DateTime.UtcNow : null,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = createdAt ?? DateTime.UtcNow
         };
 
         db.Organizations.Add(org);

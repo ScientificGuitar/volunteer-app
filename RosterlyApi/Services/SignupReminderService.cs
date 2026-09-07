@@ -66,7 +66,31 @@ public class SignupReminderService
             .Take(batchSize)
             .ToList();
 
-        foreach (var signup in due)
+        // Leeway: if the signup was created very recently, its confirmation email
+        // (with a working manage link) is still fresh. Sending a reminder now would
+        // rotate the token and invalidate that link, so suppress the reminder entirely.
+        var leewayHours = _reminderOptions.SuppressIfCreatedWithinHours;
+        var sendable = due;
+        if (leewayHours > 0)
+        {
+            var leewayCutoff = now.AddHours(-leewayHours);
+            var suppressed = due.Where(s => s.CreatedAt >= leewayCutoff).ToList();
+            foreach (var signup in suppressed)
+            {
+                signup.ReminderSentAt = now;
+                _logger.LogInformation("Skipped reminder for recently-created signup {SignupId}", signup.Id);
+            }
+
+            sendable = [.. due.Except(suppressed)];
+
+            if (suppressed.Count > 0 && sendable.Count == 0)
+            {
+                await _db.SaveChangesAsync(ct);
+                return 0;
+            }
+        }
+
+        foreach (var signup in sendable)
         {
             // Rotate the management token so the reminder can embed a working view/cancel link (same as resend flow).
             var rawToken = TokenService.GenerateToken();
@@ -92,6 +116,6 @@ public class SignupReminderService
             _logger.LogInformation("Enqueued reminder for signup {SignupId}", signup.Id);
         }
 
-        return due.Count;
+        return sendable.Count;
     }
 }
