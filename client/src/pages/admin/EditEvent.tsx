@@ -357,9 +357,7 @@ function EventForm({ event, eventId }: EventFormProps) {
         onOpenChange={(open) => {
           if (!open) setPendingSlot(null)
         }}
-        title={
-          pendingSlot ? `Delete "${pendingSlot.label}"?` : "Delete slot?"
-        }
+        title={pendingSlot ? `Delete "${pendingSlot.label}"?` : "Delete slot?"}
         description={
           pendingSlot && pendingSlot.signups.length > 0
             ? `This will also remove ${pendingSlot.signups.length} signup(s). This action cannot be undone.`

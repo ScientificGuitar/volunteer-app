@@ -1,6 +1,11 @@
 import { Link } from "react-router-dom"
 import { OPERATOR_NAME } from "./legal"
-import { ContactLine, ExternalLink, LegalLayout, LegalSection } from "./LegalLayout"
+import {
+  ContactLine,
+  ExternalLink,
+  LegalLayout,
+  LegalSection,
+} from "./LegalLayout"
 
 export function TermsOfServicePage() {
   return (
@@ -11,8 +16,8 @@ export function TermsOfServicePage() {
     >
       <LegalSection id="who-we-are" title="1. Who we are">
         <p>
-          {OPERATOR_NAME} (“we”, “us”) provides the volunteer-scheduling
-          service described above. <ContactLine />
+          {OPERATOR_NAME} (“we”, “us”) provides the volunteer-scheduling service
+          described above. <ContactLine />
         </p>
       </LegalSection>
 
@@ -52,9 +57,9 @@ export function TermsOfServicePage() {
           </li>
         </ul>
         <p>
-          The service is currently offered free of charge. We may introduce
-          paid plans or change the available features in the future; if we do,
-          we will update these terms and tell you beforehand.
+          The service is currently offered free of charge. We may introduce paid
+          plans or change the available features in the future; if we do, we
+          will update these terms and tell you beforehand.
         </p>
       </LegalSection>
 
@@ -63,9 +68,9 @@ export function TermsOfServicePage() {
           Organizers sign in through our authentication provider,{" "}
           <ExternalLink href="https://clerk.com">Clerk</ExternalLink>. You must
           provide accurate account information and keep your login credentials
-          secure. You are responsible for everything done under your account,
-          so tell us promptly through the contact above if you believe your
-          account has been compromised.
+          secure. You are responsible for everything done under your account, so
+          tell us promptly through the contact above if you believe your account
+          has been compromised.
         </p>
         <p>
           You must be at least 16 years old (or the age of digital consent in
@@ -80,10 +85,10 @@ export function TermsOfServicePage() {
         title="5. Volunteer signup without an account"
       >
         <p>
-          Volunteers do not need an account. To sign up you enter your name
-          and email address, and we send a confirmation link to that address.
-          Your spot is only confirmed once you click the link — this keeps
-          mistyped or fake addresses out of organizers’ rosters.
+          Volunteers do not need an account. To sign up you enter your name and
+          email address, and we send a confirmation link to that address. Your
+          spot is only confirmed once you click the link — this keeps mistyped
+          or fake addresses out of organizers’ rosters.
         </p>
         <p>
           Every confirmation, reminder, and cancellation email contains a
@@ -113,20 +118,20 @@ export function TermsOfServicePage() {
           </li>
           <li>
             <strong>Accurate events.</strong> Describe your event, location,
-            date, and slots truthfully, and keep them up to date. If an event
-            is cancelled or changed, tell your volunteers — do not rely on
-            them noticing the roster changed.
+            date, and slots truthfully, and keep them up to date. If an event is
+            cancelled or changed, tell your volunteers — do not rely on them
+            noticing the roster changed.
           </li>
           <li>
             <strong>Data minimization.</strong> The signup form only asks for
             name and email. Do not use event descriptions or slot labels to
-            collect extra sensitive information (for example health details
-            or government ID numbers).
+            collect extra sensitive information (for example health details or
+            government ID numbers).
           </li>
           <li>
             <strong>Respect volunteer choices.</strong> If a volunteer cancels,
-            their spot is released. Do not re-add people who cancelled or
-            pursue them outside {OPERATOR_NAME} about it.
+            their spot is released. Do not re-add people who cancelled or pursue
+            them outside {OPERATOR_NAME} about it.
           </li>
           <li>
             <strong>Exports.</strong> If you export the volunteer list, you
@@ -142,11 +147,13 @@ export function TermsOfServicePage() {
       >
         <ul className="list-disc space-y-1 pl-6">
           <li>Give your real name and an email address you can access.</li>
-          <li>Only sign yourself up, unless someone asked you to sign them up.</li>
+          <li>
+            Only sign yourself up, unless someone asked you to sign them up.
+          </li>
           <li>
             Only sign up for shifts you intend to attend. If your plans change,
-            cancel through your manage link so the organizer can offer the
-            spot to someone else.
+            cancel through your manage link so the organizer can offer the spot
+            to someone else.
           </li>
           <li>
             Do not submit someone else’s personal data, abusive content, or
@@ -161,12 +168,12 @@ export function TermsOfServicePage() {
           <li>use the service for anything unlawful or fraudulent,</li>
           <li>
             probe, overload, or circumvent the service — including trying to
-            take a slot that is already full, guessing manage links, or
-            scraping invite pages,
+            take a slot that is already full, guessing manage links, or scraping
+            invite pages,
           </li>
           <li>
-            send spam, phishing, or harassing messages through or because of
-            the service,
+            send spam, phishing, or harassing messages through or because of the
+            service,
           </li>
           <li>
             upload malware or content that infringes someone else’s rights,
@@ -177,18 +184,18 @@ export function TermsOfServicePage() {
           </li>
         </ul>
         <p>
-          If you run an event on behalf of an organization, you confirm you
-          are authorized to do so.
+          If you run an event on behalf of an organization, you confirm you are
+          authorized to do so.
         </p>
       </LegalSection>
 
       <LegalSection id="emails" title="9. Email communications">
         <p>
           Transactional emails (signup confirmations, reminders sent around 24
-          hours before a shift, and cancellation notices) are an essential
-          part of the service and are sent by our email provider,{" "}
-          <ExternalLink href="https://resend.com">Resend</ExternalLink>, on
-          our behalf. By signing up as a volunteer or running events as an
+          hours before a shift, and cancellation notices) are an essential part
+          of the service and are sent by our email provider,{" "}
+          <ExternalLink href="https://resend.com">Resend</ExternalLink>, on our
+          behalf. By signing up as a volunteer or running events as an
           organizer, you agree to receive these service emails. We do not send
           marketing emails to volunteers.
         </p>
@@ -197,11 +204,11 @@ export function TermsOfServicePage() {
       <LegalSection id="availability" title="10. Availability and changes">
         <p>
           We work to keep {OPERATOR_NAME} reliable — for example by preventing
-          two volunteers from taking the last spot at the same time — but we
-          do not guarantee uninterrupted or error-free operation. We may
-          modify, suspend, or discontinue parts of the service (for
-          maintenance, security, or legal reasons) and will try to give
-          reasonable notice when the impact is significant.
+          two volunteers from taking the last spot at the same time — but we do
+          not guarantee uninterrupted or error-free operation. We may modify,
+          suspend, or discontinue parts of the service (for maintenance,
+          security, or legal reasons) and will try to give reasonable notice
+          when the impact is significant.
         </p>
       </LegalSection>
 
@@ -209,44 +216,43 @@ export function TermsOfServicePage() {
         <p>
           Organizers can stop using the service at any time by deleting their
           events and organization or by asking us to delete their account.
-          Volunteers can cancel individual signups through their manage link
-          at any time.
+          Volunteers can cancel individual signups through their manage link at
+          any time.
         </p>
         <p>
-          We may suspend or terminate access — for example an organizer
-          account or a specific event link — if these terms are violated, if
-          required by law, or to protect volunteers, organizers, or the
-          service. Where practical we will explain what happened and how to
-          appeal.
+          We may suspend or terminate access — for example an organizer account
+          or a specific event link — if these terms are violated, if required by
+          law, or to protect volunteers, organizers, or the service. Where
+          practical we will explain what happened and how to appeal.
         </p>
       </LegalSection>
 
       <LegalSection id="liability" title="12. Disclaimer and liability">
         <p>
-          The service is provided “as is” without warranties of any kind,
-          except where the law does not allow such exclusions. {OPERATOR_NAME}{" "}
+          The service is provided “as is” without warranties of any kind, except
+          where the law does not allow such exclusions. {OPERATOR_NAME}{" "}
           coordinates signups; it does not employ, insure, or supervise
           volunteers, and organizers are solely responsible for running safe
           events.
         </p>
         <p>
           To the maximum extent permitted by law, our liability for any claim
-          connected to the service is limited to the amounts you paid us in
-          the 12 months before the claim arose (which is zero while the
-          service is free). Nothing in these terms limits liability where the
-          law does not permit it — including for death or personal injury
-          caused by negligence, fraud, or your statutory consumer and data
-          protection rights.
+          connected to the service is limited to the amounts you paid us in the
+          12 months before the claim arose (which is zero while the service is
+          free). Nothing in these terms limits liability where the law does not
+          permit it — including for death or personal injury caused by
+          negligence, fraud, or your statutory consumer and data protection
+          rights.
         </p>
       </LegalSection>
 
       <LegalSection id="changes" title="13. Changes to these terms">
         <p>
-          If we change these terms materially, we will post the updated
-          version on this page with a new “last updated” date and, where the
-          change is significant, give additional notice (for example in the
-          app). Continuing to use {OPERATOR_NAME} after the changes take
-          effect means you accept them.
+          If we change these terms materially, we will post the updated version
+          on this page with a new “last updated” date and, where the change is
+          significant, give additional notice (for example in the app).
+          Continuing to use {OPERATOR_NAME} after the changes take effect means
+          you accept them.
         </p>
       </LegalSection>
 

@@ -120,7 +120,9 @@ export function Dashboard() {
       queryClient.invalidateQueries({ queryKey: ["org"] })
       navigate("/dashboard")
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to delete organization")
+      toast.error(
+        e instanceof Error ? e.message : "Failed to delete organization"
+      )
     } finally {
       setDeleting(false)
       setDeleteDialogOpen(false)

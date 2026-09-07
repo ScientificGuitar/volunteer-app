@@ -1,10 +1,6 @@
 import type { ReactNode } from "react"
 import { Link } from "react-router-dom"
-import {
-  LEGAL_CONTACT_EMAIL,
-  LEGAL_LAST_UPDATED,
-  OPERATOR_NAME,
-} from "./legal"
+import { LEGAL_CONTACT_EMAIL, LEGAL_LAST_UPDATED, OPERATOR_NAME } from "./legal"
 
 export function ContactLine() {
   if (LEGAL_CONTACT_EMAIL) {
@@ -42,10 +38,7 @@ export function LegalSection({
 }) {
   return (
     <section id={id} aria-labelledby={`${id}-heading`} className="mt-8">
-      <h2
-        id={`${id}-heading`}
-        className="text-lg font-semibold tracking-tight"
-      >
+      <h2 id={`${id}-heading`} className="text-lg font-semibold tracking-tight">
         {title}
       </h2>
       <div className="mt-2 space-y-3 text-[15px] leading-7 text-muted-foreground">
@@ -99,7 +92,9 @@ export function LegalLayout({
       <p className="mt-2 text-sm text-muted-foreground">
         Last updated: {LEGAL_LAST_UPDATED}
       </p>
-      <p className="mt-4 text-[15px] leading-7 text-muted-foreground">{intro}</p>
+      <p className="mt-4 text-[15px] leading-7 text-muted-foreground">
+        {intro}
+      </p>
       {children}
       <p className="mt-10 border-t pt-6 text-sm text-muted-foreground">
         Also see our{" "}

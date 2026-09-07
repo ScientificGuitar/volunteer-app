@@ -41,10 +41,10 @@ export function SignupManagePage() {
           This signup link is invalid or has expired.
         </p>
         <p className="mt-2 text-sm text-muted-foreground">
-          Links stop working when a newer one is issued &mdash; for example,
-          if you re-sent your confirmation or received a reminder email (sent
-          about 24 hours before your shift). Please open the newest email from
-          us and use the link inside it.
+          Links stop working when a newer one is issued &mdash; for example, if
+          you re-sent your confirmation or received a reminder email (sent about
+          24 hours before your shift). Please open the newest email from us and
+          use the link inside it.
         </p>
       </div>
     )
