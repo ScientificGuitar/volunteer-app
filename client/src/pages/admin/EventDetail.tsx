@@ -236,11 +236,7 @@ export function EventDetail() {
                 filled={activeSignupCount(slot.signups)}
                 capacity={slot.capacity}
               />
-              {slot.signups.length === 0 && (
-                <p className="text-sm text-muted-foreground italic">
-                  No signups yet
-                </p>
-              )}
+
               {slot.signups.length > 0 && (
                 <table className="w-full text-sm">
                   <thead>
