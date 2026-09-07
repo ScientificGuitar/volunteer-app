@@ -267,6 +267,7 @@ export function EventDetail() {
                             size="icon"
                             className="h-6 w-6 text-muted-foreground hover:text-destructive"
                             onClick={() => setPendingSignupId(s.id)}
+                            disabled={s.status === "Cancelled" || s.status === "Removed"}
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
