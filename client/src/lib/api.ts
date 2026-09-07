@@ -5,6 +5,7 @@ import type {
   PublicInviteData,
   CreateSlotRequest,
   UpdateSlotRequest,
+  UpdateEventRequest,
   TimeSlotResponse,
   UserMeResponse,
   SignupManageData,
@@ -101,15 +102,7 @@ export function createAdminApi(getToken: () => Promise<string | null>) {
       return checkJson<{ id: string }>(res)
     },
 
-    updateEvent: async (
-      eventId: string,
-      data: {
-        title?: string
-        description?: string | null
-        location?: string | null
-        date?: string
-      }
-    ) => {
+    updateEvent: async (eventId: string, data: UpdateEventRequest) => {
       const res = await fetch(`${BASE}/events/${eventId}`, {
         method: "PUT",
         headers: await h(),

@@ -1258,6 +1258,18 @@ export interface components {
             location: null | string;
             /** Format: date */
             date: null | string;
+            slots: null | components["schemas"]["EventSlotUpsert"][];
+        };
+        EventSlotUpsert: {
+            /** Format: uuid */
+            id: null | string;
+            label: string;
+            /** Format: time */
+            startTime: string;
+            /** Format: time */
+            endTime: string;
+            /** Format: int32 */
+            capacity: number | string;
         };
         UpdateSlotRequest: {
             label: null | string;

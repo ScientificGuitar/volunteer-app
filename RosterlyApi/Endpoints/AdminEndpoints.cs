@@ -216,6 +216,7 @@ public static class AdminEndpoints
         var userId = GetUserId(http);
         var evt = await db.Events
             .Include(e => e.Organization)
+            .Include(e => e.TimeSlots).ThenInclude(s => s.Signups)
             .FirstOrDefaultAsync(e => e.Id == id && e.Organization.ClerkUserId == userId, ct);
 
         if (evt is null) return Results.NotFound();
@@ -227,6 +228,83 @@ public static class AdminEndpoints
         if (request.Location is not null)
             evt.Location = string.IsNullOrWhiteSpace(request.Location) ? null : request.Location;
         if (request.Date is not null) evt.Date = request.Date.Value;
+
+        if (request.Slots is not null)
+        {
+            var seenIds = new HashSet<Guid>();
+            foreach (var s in request.Slots)
+            {
+                if (s.Id is { } sid && !seenIds.Add(sid))
+                {
+                    return Results.ValidationProblem(new Dictionary<string, string[]>
+                    {
+                        ["Slots"] = ["Duplicate slot id in request."]
+                    });
+                }
+            }
+
+            var existingById = evt.TimeSlots.ToDictionary(s => s.Id);
+            // Snapshot before mutating: newly added slots get pulled into the
+            // tracked evt.TimeSlots collection via relationship fixup and must
+            // not be treated as deletion candidates below.
+            var originalSlots = evt.TimeSlots.ToList();
+            var requestedIds = new HashSet<Guid>(
+                request.Slots.Where(s => s.Id.HasValue).Select(s => s.Id!.Value));
+
+            if (requestedIds.Any(rid => !existingById.ContainsKey(rid)))
+            {
+                return Results.NotFound();
+            }
+
+            for (var i = 0; i < request.Slots.Count; i++)
+            {
+                var s = request.Slots[i];
+                if (s.EndTime <= s.StartTime)
+                {
+                    return Results.ValidationProblem(new Dictionary<string, string[]>
+                    {
+                        [$"Slots[{i}].EndTime"] = new[] { "EndTime must be after StartTime." }
+                    });
+                }
+
+                if (s.Id is { } sid)
+                {
+                    var slot = existingById[sid];
+                    var signupCount = slot.Signups.Count(
+                        sg => sg.Status != SignupStatus.Cancelled && sg.Status != SignupStatus.Removed);
+                    if (s.Capacity < signupCount)
+                    {
+                        return Results.ValidationProblem(new Dictionary<string, string[]>
+                        {
+                            [$"Slots[{i}].Capacity"] = new[] { $"Capacity cannot be less than the current signup count ({signupCount})." }
+                        });
+                    }
+
+                    slot.Label = s.Label;
+                    slot.StartTime = s.StartTime;
+                    slot.EndTime = s.EndTime;
+                    slot.Capacity = s.Capacity;
+                }
+                else
+                {
+                    db.TimeSlots.Add(new TimeSlot
+                    {
+                        Id = Guid.NewGuid(),
+                        EventId = evt.Id,
+                        Label = s.Label,
+                        StartTime = s.StartTime,
+                        EndTime = s.EndTime,
+                        Capacity = s.Capacity,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
+            }
+
+            foreach (var slot in originalSlots.Where(s => !requestedIds.Contains(s.Id)))
+            {
+                db.TimeSlots.Remove(slot);
+            }
+        }
 
         await db.SaveChangesAsync(ct);
 
@@ -512,7 +590,8 @@ public record UpdateEventRequest(
     [property: NotWhitespace, StringLength(300)] string? Title,
     [property: StringLength(2000)] string? Description,
     [property: StringLength(500)] string? Location,
-    DateOnly? Date) : IValidatableObject
+    DateOnly? Date,
+    [property: MaxLength(50)] List<EventSlotUpsert>? Slots) : IValidatableObject
 {
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
@@ -553,6 +632,24 @@ public record UpdateSlotRequest(
     TimeOnly? StartTime,
     TimeOnly? EndTime,
     [property: Range(1, 10_000)] int? Capacity);
+
+public record EventSlotUpsert(
+    Guid? Id,
+    [property: Required, NotWhitespace, StringLength(200)] string Label,
+    TimeOnly StartTime,
+    TimeOnly EndTime,
+    [property: Range(1, 10_000)] int Capacity) : IValidatableObject
+{
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (EndTime <= StartTime)
+        {
+            yield return new ValidationResult(
+                "EndTime must be after StartTime.",
+                [nameof(EndTime), nameof(StartTime)]);
+        }
+    }
+}
 
 // --- Response DTOs ---
 

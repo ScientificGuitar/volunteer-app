@@ -161,12 +161,7 @@ export function CreateEvent() {
         </div>
 
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Label>Time Slots</Label>
-            <Button type="button" variant="outline" size="sm" onClick={addSlot}>
-              <Plus className="mr-1 h-4 w-4" /> Add Slot
-            </Button>
-          </div>
+          <Label>Time Slots</Label>
 
           {slots.length === 0 && (
             <p className="text-sm text-muted-foreground">
@@ -235,6 +230,10 @@ export function CreateEvent() {
               </Button>
             </div>
           ))}
+
+          <Button type="button" variant="outline" size="sm" onClick={addSlot}>
+            <Plus className="mr-1 h-4 w-4" /> Add Slot
+          </Button>
         </div>
 
         <div className="flex gap-2">

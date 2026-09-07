@@ -188,6 +188,126 @@ public class AdminEndpointTests : IClassFixture<IntegrationTestFactory>
     }
 
     [Fact]
+    public async Task UpdateEvent_WithSlotSync_CreatesUpdatesAndDeletesAtomically()
+    {
+        var orgId = await SeedOrgAsync("Sync Slots Org");
+        var create = await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events", new
+        {
+            title = "Sync Event",
+            date = FutureDate(),
+            slots = new[]
+            {
+                new { label = "Keep", startTime = "08:00", endTime = "09:00", capacity = 2 },
+                new { label = "Drop", startTime = "10:00", endTime = "11:00", capacity = 2 }
+            }
+        });
+        Assert.Equal(HttpStatusCode.Created, create.StatusCode);
+        var created = await create.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        var eventId = created.GetProperty("id").GetGuid();
+
+        var before = await _client.GetFromJsonAsync<JsonElement>($"/api/events/{eventId}", _jsonOptions);
+        var keepId = before.GetProperty("slots").EnumerateArray()
+            .First(s => s.GetProperty("label").GetString() == "Keep")
+            .GetProperty("id").GetGuid();
+
+        var response = await _client.PutAsJsonAsync($"/api/events/{eventId}", new
+        {
+            title = "Sync Event Updated",
+            slots = new object[]
+            {
+                new { id = keepId, label = "Keep Renamed", startTime = "08:00", endTime = "09:30", capacity = 4 },
+                new { label = "Brand New", startTime = "12:00", endTime = "13:00", capacity = 5 }
+            }
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var after = await _client.GetFromJsonAsync<JsonElement>($"/api/events/{eventId}", _jsonOptions);
+        Assert.Equal("Sync Event Updated", after.GetProperty("title").GetString());
+        var afterSlots = after.GetProperty("slots").EnumerateArray().ToList();
+        Assert.Equal(2, afterSlots.Count);
+        Assert.DoesNotContain(afterSlots, s => s.GetProperty("label").GetString() == "Drop");
+        var renamed = afterSlots.First(s => s.GetProperty("label").GetString() == "Keep Renamed");
+        Assert.Equal(keepId, renamed.GetProperty("id").GetGuid());
+        Assert.Equal(4, renamed.GetProperty("capacity").GetInt32());
+        Assert.Contains(afterSlots, s => s.GetProperty("label").GetString() == "Brand New");
+    }
+
+    [Fact]
+    public async Task UpdateEvent_WithSlots_CapacityBelowSignupCount_Returns400()
+    {
+        var (_, eventId, slotId) = await SeedSlotAsync("Sync Cap Org");
+
+        var linkResp = await _client.PostAsJsonAsync($"/api/events/{eventId}/invite-links", new { });
+        var link = await linkResp.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        var code = link.GetProperty("code").GetString()!;
+
+        foreach (var email in new[] { "one@example.com", "two@example.com" })
+        {
+            var signupResp = await _client.PostAsJsonAsync($"/api/invite/{code}/signups",
+                new { slotId, volunteerName = "Vol", email });
+            Assert.Equal(HttpStatusCode.Created, signupResp.StatusCode);
+        }
+
+        var response = await _client.PutAsJsonAsync($"/api/events/{eventId}", new
+        {
+            slots = new object[]
+            {
+                new { id = slotId, label = "Test Slot", startTime = "09:00", endTime = "10:00", capacity = 1 }
+            }
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdateEvent_WithSlots_InvalidTimes_Returns400()
+    {
+        var (_, eventId, slotId) = await SeedSlotAsync("Sync Times Org");
+
+        var response = await _client.PutAsJsonAsync($"/api/events/{eventId}", new
+        {
+            slots = new object[]
+            {
+                new { id = slotId, label = "Test Slot", startTime = "10:00", endTime = "09:00", capacity = 3 }
+            }
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdateEvent_OmitsSlots_LeavesSlotsUntouched()
+    {
+        var (_, eventId, _) = await SeedSlotAsync("Sync Omit Org");
+
+        var response = await _client.PutAsJsonAsync($"/api/events/{eventId}",
+            new { title = "Renamed Only" });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var after = await _client.GetFromJsonAsync<JsonElement>($"/api/events/{eventId}", _jsonOptions);
+        Assert.Equal("Renamed Only", after.GetProperty("title").GetString());
+        Assert.Single(after.GetProperty("slots").EnumerateArray());
+    }
+
+    [Fact]
+    public async Task UpdateEvent_WithSlots_UnknownSlotId_Returns404()
+    {
+        var (_, eventId, _) = await SeedSlotAsync("Sync Unknown Org");
+
+        var response = await _client.PutAsJsonAsync($"/api/events/{eventId}", new
+        {
+            slots = new object[]
+            {
+                new { id = Guid.NewGuid(), label = "Ghost", startTime = "09:00", endTime = "10:00", capacity = 2 }
+            }
+        });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
     public async Task DeleteEvent_RemovesEvent()
     {
         var orgId = await SeedOrgAsync("Delete Org");

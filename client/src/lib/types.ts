@@ -34,6 +34,10 @@ export type SignupManageData = NumericFields<Schemas["SignupManageResponse"]>
 
 export type UpdateSlotRequest = NumericFields<Schemas["UpdateSlotRequest"]>
 
+export type UpdateEventRequest = NumericFields<Schemas["UpdateEventRequest"]>
+
+export type EventSlotUpsert = NumericFields<Schemas["EventSlotUpsert"]>
+
 export type TimeSlotResponse = NumericFields<Schemas["TimeSlotResponse"]>
 
 export type UserMeResponse = NumericFields<Schemas["UserMeResponse"]>
