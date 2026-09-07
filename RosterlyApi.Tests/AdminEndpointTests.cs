@@ -80,7 +80,7 @@ public class AdminEndpointTests : IClassFixture<IntegrationTestFactory>
         var response = await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events", new
         {
             title = "Sunday Service",
-            date = "2026-07-12"
+            date = FutureDate()
         });
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -92,11 +92,12 @@ public class AdminEndpointTests : IClassFixture<IntegrationTestFactory>
     public async Task CreateEvent_WithInlineSlots_Returns201WithSlots()
     {
         var orgId = await SeedOrgAsync("Slots Org");
+        var eventDate = FutureDate();
 
         var response = await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events", new
         {
             title = "Service With Slots",
-            date = "2026-07-12",
+            date = eventDate,
             slots = new[]
             {
                 new { label = "Morning", startTime = "08:00", endTime = "09:00", capacity = 3 },
@@ -108,7 +109,7 @@ public class AdminEndpointTests : IClassFixture<IntegrationTestFactory>
 
         // Verify slots appear in roster
         var roster = await _client.GetFromJsonAsync<JsonElement>(
-            $"/api/organizations/{orgId}/roster?weekStart=2026-07-06", _jsonOptions);
+            $"/api/organizations/{orgId}/roster?weekStart={WeekStartFor(eventDate)}", _jsonOptions);
         var events = roster.EnumerateArray().ToList();
         var evt = events.First(e => e.GetProperty("title").GetString() == "Service With Slots");
         var slots = evt.GetProperty("slots").EnumerateArray().ToList();
@@ -119,12 +120,13 @@ public class AdminEndpointTests : IClassFixture<IntegrationTestFactory>
     public async Task ListEvents_ByDateRange_ReturnsFilteredEvents()
     {
         var orgId = await SeedOrgAsync("List Org");
+        var baseDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30));
 
-        await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events", new { title = "Event 1", date = "2026-07-05" });
-        await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events", new { title = "Event 2", date = "2026-07-12" });
-        await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events", new { title = "Event 3", date = "2026-07-19" });
+        await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events", new { title = "Event 1", date = baseDate.ToString("yyyy-MM-dd") });
+        await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events", new { title = "Event 2", date = baseDate.AddDays(7).ToString("yyyy-MM-dd") });
+        await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events", new { title = "Event 3", date = baseDate.AddDays(14).ToString("yyyy-MM-dd") });
 
-        var response = await _client.GetAsync($"/api/organizations/{orgId}/events?from=2026-07-10&to=2026-07-15");
+        var response = await _client.GetAsync($"/api/organizations/{orgId}/events?from={baseDate.AddDays(5):yyyy-MM-dd}&to={baseDate.AddDays(10):yyyy-MM-dd}");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
@@ -139,7 +141,7 @@ public class AdminEndpointTests : IClassFixture<IntegrationTestFactory>
     {
         var orgId = await SeedOrgAsync("Update Org");
         var create = await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events",
-            new { title = "Old Title", date = "2026-07-12" });
+            new { title = "Old Title", date = FutureDate() });
         var created = await create.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
         var eventId = created.GetProperty("id").GetGuid();
 
@@ -156,7 +158,7 @@ public class AdminEndpointTests : IClassFixture<IntegrationTestFactory>
     {
         var orgId = await SeedOrgAsync("Clear Description Org");
         var create = await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events",
-            new { title = "Described Event", description = "Old description", date = "2026-07-12" });
+            new { title = "Described Event", description = "Old description", date = FutureDate() });
         var created = await create.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
         var eventId = created.GetProperty("id").GetGuid();
 
@@ -173,7 +175,7 @@ public class AdminEndpointTests : IClassFixture<IntegrationTestFactory>
     {
         var orgId = await SeedOrgAsync("Clear Whitespace Description Org");
         var create = await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events",
-            new { title = "Described Event", description = "Old description", date = "2026-07-12" });
+            new { title = "Described Event", description = "Old description", date = FutureDate() });
         var created = await create.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
         var eventId = created.GetProperty("id").GetGuid();
 
@@ -189,8 +191,9 @@ public class AdminEndpointTests : IClassFixture<IntegrationTestFactory>
     public async Task DeleteEvent_RemovesEvent()
     {
         var orgId = await SeedOrgAsync("Delete Org");
+        var eventDate = FutureDate();
         var create = await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events",
-            new { title = "To Delete", date = "2026-07-12" });
+            new { title = "To Delete", date = eventDate });
         var created = await create.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
         var eventId = created.GetProperty("id").GetGuid();
 
@@ -199,7 +202,7 @@ public class AdminEndpointTests : IClassFixture<IntegrationTestFactory>
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
 
         var roster = await _client.GetFromJsonAsync<JsonElement>(
-            $"/api/organizations/{orgId}/roster?weekStart=2026-07-06", _jsonOptions);
+            $"/api/organizations/{orgId}/roster?weekStart={WeekStartFor(eventDate)}", _jsonOptions);
         Assert.Empty(roster.EnumerateArray());
     }
 
@@ -210,7 +213,7 @@ public class AdminEndpointTests : IClassFixture<IntegrationTestFactory>
     {
         var orgId = await SeedOrgAsync("Slot Org");
         var create = await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events",
-            new { title = "Slot Event", date = "2026-07-12" });
+            new { title = "Slot Event", date = FutureDate() });
         var created = await create.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
         var eventId = created.GetProperty("id").GetGuid();
 
@@ -234,7 +237,7 @@ public class AdminEndpointTests : IClassFixture<IntegrationTestFactory>
     {
         var orgId = await SeedOrgAsync("Del Slot Org");
         var createEvt = await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events",
-            new { title = "Del Slot Event", date = "2026-07-12" });
+            new { title = "Del Slot Event", date = FutureDate() });
         var evt = await createEvt.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
         var eventId = evt.GetProperty("id").GetGuid();
 
@@ -254,15 +257,16 @@ public class AdminEndpointTests : IClassFixture<IntegrationTestFactory>
     public async Task GetRoster_ReturnsWeeklyData()
     {
         var orgId = await SeedOrgAsync("Roster Org");
+        var eventDate = FutureDate();
         var create = await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events", new
         {
             title = "Roster Event",
-            date = "2026-07-08",
+            date = eventDate,
             slots = new[] { new { label = "Slot 1", startTime = "08:00", endTime = "09:00", capacity = 2 } }
         });
         Assert.Equal(HttpStatusCode.Created, create.StatusCode);
 
-        var response = await _client.GetAsync($"/api/organizations/{orgId}/roster?weekStart=2026-07-06");
+        var response = await _client.GetAsync($"/api/organizations/{orgId}/roster?weekStart={WeekStartFor(eventDate)}");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
@@ -530,13 +534,23 @@ public class AdminEndpointTests : IClassFixture<IntegrationTestFactory>
         return body.GetProperty("id").GetGuid();
     }
 
+    private static string FutureDate(int daysAhead = 30) =>
+        DateOnly.FromDateTime(DateTime.UtcNow.AddDays(daysAhead)).ToString("yyyy-MM-dd");
+
+    private static string WeekStartFor(string dateString)
+    {
+        var date = DateOnly.Parse(dateString);
+        return date.AddDays(-(((int)date.DayOfWeek + 6) % 7)).ToString("yyyy-MM-dd");
+    }
+
     private async Task<(Guid orgId, Guid eventId, Guid slotId)> SeedSlotAsync(string orgName)
     {
         var orgId = await SeedOrgAsync(orgName);
+        var eventDate = FutureDate();
         var createEvt = await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events", new
         {
             title = "Test Event",
-            date = "2026-07-12",
+            date = eventDate,
             slots = new[] { new { label = "Test Slot", startTime = "09:00", endTime = "10:00", capacity = 3 } }
         });
         var evt = await createEvt.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
@@ -544,7 +558,7 @@ public class AdminEndpointTests : IClassFixture<IntegrationTestFactory>
 
         // Fetch the roster to get the slot ID
         var roster = await _client.GetFromJsonAsync<JsonElement>(
-            $"/api/organizations/{orgId}/roster?weekStart=2026-07-06", _jsonOptions);
+            $"/api/organizations/{orgId}/roster?weekStart={WeekStartFor(eventDate)}", _jsonOptions);
         var slotId = roster.EnumerateArray().First()
             .GetProperty("slots").EnumerateArray().First()
             .GetProperty("id").GetGuid();

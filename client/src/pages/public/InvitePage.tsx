@@ -76,19 +76,32 @@ export function InvitePage() {
         )}
       </header>
 
-      <section className="space-y-3">
-        <h2 className="flex items-center gap-2 text-lg font-semibold">
-          <Users className="h-5 w-5" />
-          Volunteer slots
-        </h2>
-        {event.slots.length === 0 ? (
-          <p className="rounded-md border border-dashed py-8 text-center text-sm text-muted-foreground">
-            No slots have been created for this event yet.
-          </p>
-        ) : (
-          <SignupForm slots={event.slots} code={code!} />
-        )}
-      </section>
+      {event.isPast ? (
+        <Card>
+          <CardContent className="flex flex-col items-center gap-2 p-6 text-center">
+            <Calendar className="h-8 w-8 text-muted-foreground" />
+            <p className="font-medium">This event has already passed</p>
+            <p className="text-sm text-muted-foreground">
+              Signups are closed. Contact {organizationName} if you have any
+              questions.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <section className="space-y-3">
+          <h2 className="flex items-center gap-2 text-lg font-semibold">
+            <Users className="h-5 w-5" />
+            Volunteer slots
+          </h2>
+          {event.slots.length === 0 ? (
+            <p className="rounded-md border border-dashed py-8 text-center text-sm text-muted-foreground">
+              No slots have been created for this event yet.
+            </p>
+          ) : (
+            <SignupForm slots={event.slots} code={code!} />
+          )}
+        </section>
+      )}
     </div>
   )
 }
@@ -145,6 +158,11 @@ function SignupForm({ slots, code }: { slots: PublicSlot[]; code: string }) {
         }
         if (err.code === "duplicate_confirmed") {
           toast.error("You're already confirmed for this slot.")
+          return
+        }
+        if (err.code === "event_in_past") {
+          toast.error("This event has already passed.")
+          await queryClient.invalidateQueries({ queryKey: ["invite", code] })
           return
         }
       }

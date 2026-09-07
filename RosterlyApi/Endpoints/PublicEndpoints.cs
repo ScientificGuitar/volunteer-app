@@ -70,6 +70,7 @@ public static class PublicEndpoints
                 evt.Description,
                 evt.Location,
                 evt.Date,
+                evt.Date < DateOnly.FromDateTime(DateTime.UtcNow),
                 evt.TimeSlots
                     .OrderBy(s => s.StartTime)
                     .Select(s => new SlotAvailabilityResponse(
@@ -199,6 +200,13 @@ public static class PublicEndpoints
             if (slot is null || slot.Event is null)
                 return Results.NotFound(new { error = "Time slot not found" });
 
+            if (slot.Event.Date < DateOnly.FromDateTime(DateTime.UtcNow))
+                return Results.BadRequest(new
+                {
+                    error = "This event has already passed",
+                    code = "event_in_past"
+                });
+
             await EnqueueConfirmationEmail(db, outbox, emailOptions, signup, slot, rawToken, ct);
 
             await db.SaveChangesAsync(ct);
@@ -219,7 +227,7 @@ public static class PublicEndpoints
                     .ThenInclude(e => e.Organization)
             .FirstOrDefaultAsync(s => s.ManagementTokenHash == hash, ct);
 
-        if (signup is null || signup.TimeSlot.Event is null)
+        if (signup is null)
             return Results.NotFound(new { error = "Signup link not found", code = "invalid_manage_link" });
 
         if (signup.Status == SignupStatus.Pending)
@@ -387,7 +395,7 @@ public record PublicSignupRequest(
         {
             yield return new ValidationResult(
                 "SlotId is required.",
-                new[] { nameof(SlotId) });
+                [nameof(SlotId)]);
         }
     }
 }
@@ -403,7 +411,7 @@ public record ResendSignupRequest(
         {
             yield return new ValidationResult(
                 "SlotId is required.",
-                new[] { nameof(SlotId) });
+                [nameof(SlotId)]);
         }
     }
 }
@@ -412,7 +420,7 @@ public record ResendSignupRequest(
 
 public record InvitePageResponse(Guid OrganizationId, string OrganizationName, EventPublicResponse Event);
 
-public record EventPublicResponse(Guid Id, string Title, string? Description, string? Location, DateOnly Date, IEnumerable<SlotAvailabilityResponse> Slots);
+public record EventPublicResponse(Guid Id, string Title, string? Description, string? Location, DateOnly Date, bool IsPast, IEnumerable<SlotAvailabilityResponse> Slots);
 
 public record SlotAvailabilityResponse(Guid Id, string Label, TimeOnly StartTime, TimeOnly EndTime, int Capacity, int SignupCount, bool IsFull);
 

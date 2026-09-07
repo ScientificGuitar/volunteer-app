@@ -1095,6 +1095,7 @@ export interface components {
             location: null | string;
             /** Format: date */
             date: string;
+            isPast: boolean;
             slots: components["schemas"]["SlotAvailabilityResponse"][];
         };
         EventResponse: {

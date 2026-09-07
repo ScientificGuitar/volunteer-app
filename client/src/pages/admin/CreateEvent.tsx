@@ -78,6 +78,11 @@ export function CreateEvent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!org) return
+    const today = new Date().toLocaleDateString("en-CA")
+    if (date < today) {
+      toast.error("Event date cannot be in the past")
+      return
+    }
     setSubmitting(true)
 
     try {
@@ -149,6 +154,7 @@ export function CreateEvent() {
             id="date"
             type="date"
             value={date}
+            min={new Date().toLocaleDateString("en-CA")}
             onChange={(e) => setDate(e.target.value)}
             required
           />

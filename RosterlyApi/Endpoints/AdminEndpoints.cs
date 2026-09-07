@@ -497,7 +497,13 @@ public record CreateEventRequest(
         {
             yield return new ValidationResult(
                 "Date is required.",
-                new[] { nameof(Date) });
+                [nameof(Date)]);
+        }
+        else if (Date < DateOnly.FromDateTime(DateTime.UtcNow))
+        {
+            yield return new ValidationResult(
+                "Date cannot be in the past.",
+                [nameof(Date)]);
         }
     }
 }
@@ -514,7 +520,13 @@ public record UpdateEventRequest(
         {
             yield return new ValidationResult(
                 "Date is required when supplied.",
-                new[] { nameof(Date) });
+                [nameof(Date)]);
+        }
+        else if (Date is { } past && past < DateOnly.FromDateTime(DateTime.UtcNow))
+        {
+            yield return new ValidationResult(
+                "Date cannot be in the past.",
+                [nameof(Date)]);
         }
     }
 }
@@ -531,7 +543,7 @@ public record CreateSlotRequest(
         {
             yield return new ValidationResult(
                 "EndTime must be after StartTime.",
-                new[] { nameof(EndTime), nameof(StartTime) });
+                [nameof(EndTime), nameof(StartTime)]);
         }
     }
 }

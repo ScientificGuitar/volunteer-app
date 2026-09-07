@@ -8,27 +8,19 @@ using Xunit;
 
 namespace RosterlyApi.Tests;
 
-public class PublicEndpointTests : IClassFixture<IntegrationTestFactory>
+public class PublicEndpointTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
-    private readonly IntegrationTestFactory _factory;
-    private readonly HttpClient _adminClient;
-    private readonly HttpClient _publicClient;
+    private readonly HttpClient _adminClient = factory.CreateClient();
+    private readonly HttpClient _publicClient = factory.CreateClient();
     private readonly JsonSerializerOptions _jsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
 
-    public PublicEndpointTests(IntegrationTestFactory factory)
-    {
-        _factory = factory;
-        _adminClient = factory.CreateClient();
-        _publicClient = factory.CreateClient();
-    }
-
     [Fact]
     public async Task GetInvitePage_ValidCode_ReturnsOrgAndEvent()
     {
-        var (orgId, eventId, code) = await SeedInviteLinkAsync("Public Org");
+        var (_, eventId, code) = await SeedInviteLinkAsync("Public Org");
 
         var response = await _publicClient.GetAsync($"/api/invite/{code}");
 
@@ -39,6 +31,7 @@ public class PublicEndpointTests : IClassFixture<IntegrationTestFactory>
         var evt = body.GetProperty("event");
         Assert.Equal(eventId, evt.GetProperty("id").GetGuid());
         Assert.Equal("Future Event", evt.GetProperty("title").GetString());
+        Assert.False(evt.GetProperty("isPast").GetBoolean());
 
         var slots = evt.GetProperty("slots").EnumerateArray().ToList();
         Assert.Single(slots);
@@ -59,7 +52,7 @@ public class PublicEndpointTests : IClassFixture<IntegrationTestFactory>
         var (_, _, code) = await SeedInviteLinkAsync("Revoked Org");
 
         Guid linkId;
-        using (var scope = _factory.Services.CreateScope())
+        using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             linkId = (await db.InviteLinks.FirstAsync(l => l.Code == code)).Id;
@@ -151,7 +144,7 @@ public class PublicEndpointTests : IClassFixture<IntegrationTestFactory>
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
-        using var scope = _factory.Services.CreateScope();
+        using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var signup = await db.Signups.SingleAsync(s => s.Email == "token@example.com");
 
@@ -184,7 +177,7 @@ public class PublicEndpointTests : IClassFixture<IntegrationTestFactory>
 
         string rawToken;
         Guid signupId;
-        using (var scope = _factory.Services.CreateScope())
+        using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var signup = await db.Signups.SingleAsync(s => s.Email == "manager@example.com");
@@ -207,7 +200,7 @@ public class PublicEndpointTests : IClassFixture<IntegrationTestFactory>
         Assert.Equal("Future Event", body.GetProperty("eventTitle").GetString());
         Assert.Equal("Slot 1", body.GetProperty("slotLabel").GetString());
 
-        using var verifyScope = _factory.Services.CreateScope();
+        using var verifyScope = factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var confirmed = await verifyDb.Signups.SingleAsync(s => s.Id == signupId);
         Assert.Equal(SignupStatus.Confirmed, confirmed.Status);
@@ -233,7 +226,7 @@ public class PublicEndpointTests : IClassFixture<IntegrationTestFactory>
 
         string rawToken;
         Guid signupId;
-        using (var scope = _factory.Services.CreateScope())
+        using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var signup = await db.Signups.SingleAsync(s => s.Email == "cancel@example.com");
@@ -247,7 +240,7 @@ public class PublicEndpointTests : IClassFixture<IntegrationTestFactory>
         var cancelResp = await _publicClient.PostAsync($"/api/signup/manage/{rawToken}/cancel", null);
         Assert.Equal(HttpStatusCode.OK, cancelResp.StatusCode);
 
-        using var verifyScope = _factory.Services.CreateScope();
+        using var verifyScope = factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var cancelled = await verifyDb.Signups.SingleAsync(s => s.Id == signupId);
         Assert.Equal(SignupStatus.Cancelled, cancelled.Status);
@@ -301,6 +294,43 @@ public class PublicEndpointTests : IClassFixture<IntegrationTestFactory>
         });
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetInvitePage_PastEvent_MarksIsPast()
+    {
+        var (_, eventId, code) = await SeedInviteLinkAsync("Past Mark Org");
+        await MoveEventToPastAsync(eventId);
+
+        var response = await _publicClient.GetAsync($"/api/invite/{code}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        var evt = body.GetProperty("event");
+        Assert.True(evt.GetProperty("isPast").GetBoolean());
+    }
+
+    [Fact]
+    public async Task CreateSignup_PastEvent_Returns400WithCode()
+    {
+        var (_, eventId, code) = await SeedInviteLinkAsync("Past Slot Org");
+
+        var getPage = await _publicClient.GetAsync($"/api/invite/{code}");
+        var page = await getPage.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        var slotId = page.GetProperty("event").GetProperty("slots").EnumerateArray().First().GetProperty("id").GetGuid();
+
+        await MoveEventToPastAsync(eventId);
+
+        var response = await _publicClient.PostAsJsonAsync($"/api/invite/{code}/signups", new
+        {
+            slotId,
+            volunteerName = "Late User",
+            email = "late@example.com"
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        Assert.Equal("event_in_past", body.GetProperty("code").GetString());
     }
 
     [Fact]
@@ -394,7 +424,7 @@ public class PublicEndpointTests : IClassFixture<IntegrationTestFactory>
 
         // Confirm it by hitting the manage page
         string rawToken;
-        using (var scope = _factory.Services.CreateScope())
+        using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             rawToken = ExtractManageToken(db, "confdup@example.com");
@@ -494,7 +524,7 @@ public class PublicEndpointTests : IClassFixture<IntegrationTestFactory>
 
         string rawToken;
         Guid cancelledId;
-        using (var scope = _factory.Services.CreateScope())
+        using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             cancelledId = db.Signups.Single(s => s.Email == "re@example.com").Id;
@@ -512,7 +542,7 @@ public class PublicEndpointTests : IClassFixture<IntegrationTestFactory>
         });
         Assert.Equal(HttpStatusCode.Created, again.StatusCode);
 
-        using var verifyScope = _factory.Services.CreateScope();
+        using var verifyScope = factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var rows = await verifyDb.Signups.Where(s => s.Email == "re@example.com").ToListAsync();
         Assert.Equal(2, rows.Count);
@@ -537,7 +567,7 @@ public class PublicEndpointTests : IClassFixture<IntegrationTestFactory>
         Assert.Equal(HttpStatusCode.Created, first.StatusCode);
 
         string originalHash;
-        using (var scope = _factory.Services.CreateScope())
+        using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             originalHash = db.Signups.Single(s => s.Email == "resend@example.com").ManagementTokenHash;
@@ -550,7 +580,7 @@ public class PublicEndpointTests : IClassFixture<IntegrationTestFactory>
         });
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        using var verifyScope = _factory.Services.CreateScope();
+        using var verifyScope = factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var signup = await verifyDb.Signups.SingleAsync(s => s.Email == "resend@example.com");
         Assert.NotEqual(originalHash, signup.ManagementTokenHash);
@@ -577,7 +607,7 @@ public class PublicEndpointTests : IClassFixture<IntegrationTestFactory>
         Assert.Equal(HttpStatusCode.Created, first.StatusCode);
 
         string rawToken;
-        using (var scope = _factory.Services.CreateScope())
+        using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             rawToken = ExtractManageToken(db, "rc@example.com");
@@ -611,6 +641,17 @@ public class PublicEndpointTests : IClassFixture<IntegrationTestFactory>
 
     // --- Helpers ---
 
+    private async Task MoveEventToPastAsync(Guid eventId)
+    {
+        // The API no longer allows creating past events, so move the event into
+        // the past directly to exercise past-slot behavior.
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var evt = await db.Events.SingleAsync(e => e.Id == eventId);
+        evt.Date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1));
+        await db.SaveChangesAsync();
+    }
+
     private sealed record InviteSlotTestData(Guid Id);
 
     private sealed record InvitePageTestData(InviteSlotTestData[] Slots);
@@ -633,8 +674,7 @@ public class PublicEndpointTests : IClassFixture<IntegrationTestFactory>
         return message.HtmlBody.Substring(start).Split('"')[0];
     }
 
-    private async Task<(Guid orgId, Guid eventId, string code)> SeedInviteLinkAsync(string name)
-    {
+    private async Task<(Guid orgId, Guid eventId, string code)> SeedInviteLinkAsync(string name)    {
         var resp = await _adminClient.PostAsJsonAsync("/api/organizations", new { name });
         var org = await resp.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
         var orgId = org.GetProperty("id").GetGuid();

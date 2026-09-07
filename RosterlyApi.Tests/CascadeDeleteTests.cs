@@ -8,20 +8,13 @@ using Xunit;
 
 namespace RosterlyApi.Tests;
 
-public class CascadeDeleteTests : IClassFixture<IntegrationTestFactory>
+public class CascadeDeleteTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
-    private readonly IntegrationTestFactory _factory;
-    private readonly HttpClient _client;
+    private readonly HttpClient _client = factory.CreateClient();
     private readonly JsonSerializerOptions _jsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
-
-    public CascadeDeleteTests(IntegrationTestFactory factory)
-    {
-        _factory = factory;
-        _client = factory.CreateClient();
-    }
 
     [Fact]
     public async Task DeleteEvent_CascadesToSlotsAndSignups()
@@ -29,10 +22,11 @@ public class CascadeDeleteTests : IClassFixture<IntegrationTestFactory>
         var orgId = await SeedOrgAsync("Cascade Org");
 
         // Create event with slot
+        var eventDate = FutureDate();
         var createEvt = await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events", new
         {
             title = "Cascade Event",
-            date = "2026-07-12",
+            date = eventDate,
             slots = new[] { new { label = "Cascade Slot", startTime = "08:00", endTime = "09:00", capacity = 5 } }
         });
         var evt = await createEvt.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
@@ -44,7 +38,7 @@ public class CascadeDeleteTests : IClassFixture<IntegrationTestFactory>
         var code = link.GetProperty("code").GetString()!;
 
         var roster = await _client.GetFromJsonAsync<JsonElement>(
-            $"/api/organizations/{orgId}/roster?weekStart=2026-07-06", _jsonOptions);
+            $"/api/organizations/{orgId}/roster?weekStart={WeekStartFor(eventDate)}", _jsonOptions);
         var slotId = roster.EnumerateArray().First()
             .GetProperty("slots").EnumerateArray().First()
             .GetProperty("id").GetGuid();
@@ -56,7 +50,7 @@ public class CascadeDeleteTests : IClassFixture<IntegrationTestFactory>
         Assert.Equal(HttpStatusCode.NoContent, deleteResp.StatusCode);
 
         // Verify slots and signups are gone
-        using var scope = _factory.Services.CreateScope();
+        using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.False(await db.Events.AnyAsync(e => e.Id == eventId));
         Assert.False(await db.TimeSlots.AnyAsync(s => s.EventId == eventId));
@@ -73,7 +67,7 @@ public class CascadeDeleteTests : IClassFixture<IntegrationTestFactory>
         var createEvt = await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events", new
         {
             title = "Doomed Event",
-            date = "2026-07-12"
+            date = FutureDate()
         });
         var evt = await createEvt.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
         var eventId = evt.GetProperty("id").GetGuid();
@@ -88,7 +82,7 @@ public class CascadeDeleteTests : IClassFixture<IntegrationTestFactory>
         Assert.Equal(HttpStatusCode.NoContent, deleteResp.StatusCode);
 
         // Invite link row still exists but EventId is null
-        using (var scope = _factory.Services.CreateScope())
+        using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var orphaned = await db.InviteLinks.FindAsync(linkId);
@@ -97,7 +91,7 @@ public class CascadeDeleteTests : IClassFixture<IntegrationTestFactory>
         }
 
         // Public endpoint returns 404 for the orphaned code
-        var publicClient = _factory.CreateClient();
+        var publicClient = factory.CreateClient();
         var getResp = await publicClient.GetAsync($"/api/invite/{code}");
         Assert.Equal(HttpStatusCode.NotFound, getResp.StatusCode);
     }
@@ -110,7 +104,7 @@ public class CascadeDeleteTests : IClassFixture<IntegrationTestFactory>
         await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events", new
         {
             title = "Doomed Event",
-            date = "2026-07-12",
+            date = FutureDate(),
             slots = new[] { new { label = "Doomed Slot", startTime = "08:00", endTime = "09:00", capacity = 2 } }
         });
 
@@ -119,7 +113,7 @@ public class CascadeDeleteTests : IClassFixture<IntegrationTestFactory>
         Assert.Equal(HttpStatusCode.NoContent, deleteOrgResp.StatusCode);
 
         // Verify cascade: nothing should remain
-        using var checkScope = _factory.Services.CreateScope();
+        using var checkScope = factory.Services.CreateScope();
         var checkDb = checkScope.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.False(await checkDb.Organizations.AnyAsync(o => o.Id == orgId));
         Assert.False(await checkDb.Events.AnyAsync(e => e.OrganizationId == orgId));
@@ -128,9 +122,18 @@ public class CascadeDeleteTests : IClassFixture<IntegrationTestFactory>
 
     // --- Helpers ---
 
+    private static string FutureDate(int daysAhead = 30) =>
+        DateOnly.FromDateTime(DateTime.UtcNow.AddDays(daysAhead)).ToString("yyyy-MM-dd");
+
+    private static string WeekStartFor(string dateString)
+    {
+        var date = DateOnly.Parse(dateString);
+        return date.AddDays(-(((int)date.DayOfWeek + 6) % 7)).ToString("yyyy-MM-dd");
+    }
+
     private async Task<Guid> SeedOrgAsync(string name)
     {
-        using var scope = _factory.Services.CreateScope();
+        using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var org = new Organization
         {

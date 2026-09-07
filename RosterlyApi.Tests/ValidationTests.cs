@@ -9,19 +9,11 @@ using Xunit;
 
 namespace RosterlyApi.Tests;
 
-public class ValidationTests : IClassFixture<IntegrationTestFactory>
+public class ValidationTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
-    private readonly IntegrationTestFactory _factory;
-    private readonly HttpClient _admin;
-    private readonly HttpClient _public;
+    private readonly HttpClient _admin = factory.CreateClient();
+    private readonly HttpClient _public = factory.CreateClient();
     private readonly JsonSerializerOptions _json = new() { PropertyNameCaseInsensitive = true };
-
-    public ValidationTests(IntegrationTestFactory factory)
-    {
-        _factory = factory;
-        _admin = factory.CreateClient();
-        _public = factory.CreateClient();
-    }
 
     // --- CreateOrganization ---
 
@@ -62,7 +54,7 @@ public class ValidationTests : IClassFixture<IntegrationTestFactory>
         var response = await _admin.PostAsJsonAsync($"/api/organizations/{orgId}/events", new
         {
             title = "",
-            date = "2026-07-12"
+            date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)).ToString("yyyy-MM-dd")
         });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -77,7 +69,7 @@ public class ValidationTests : IClassFixture<IntegrationTestFactory>
         var response = await _admin.PostAsJsonAsync($"/api/organizations/{orgId}/events", new
         {
             title = new string('x', 301),
-            date = "2026-07-12"
+            date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)).ToString("yyyy-MM-dd")
         });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -100,6 +92,35 @@ public class ValidationTests : IClassFixture<IntegrationTestFactory>
     }
 
     [Fact]
+    public async Task CreateEvent_PastDate_Returns400()
+    {
+        var orgId = await SeedOrgAsync();
+
+        var response = await _admin.PostAsJsonAsync($"/api/organizations/{orgId}/events", new
+        {
+            title = "Service",
+            date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1)).ToString("yyyy-MM-dd")
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await AssertProblemDetailsAsync(response, "Date");
+    }
+
+    [Fact]
+    public async Task UpdateEvent_PastDate_Returns400()
+    {
+        var eventId = await SeedEventAsync();
+
+        var response = await _admin.PutAsJsonAsync($"/api/events/{eventId}", new
+        {
+            date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1)).ToString("yyyy-MM-dd")
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await AssertProblemDetailsAsync(response, "Date");
+    }
+
+    [Fact]
     public async Task CreateEvent_NegativeSlotCapacity_Returns400()
     {
         var orgId = await SeedOrgAsync();
@@ -107,7 +128,7 @@ public class ValidationTests : IClassFixture<IntegrationTestFactory>
         var response = await _admin.PostAsJsonAsync($"/api/organizations/{orgId}/events", new
         {
             title = "Service",
-            date = "2026-07-12",
+            date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)).ToString("yyyy-MM-dd"),
             slots = new[] { new { label = "Bad", startTime = "08:00", endTime = "09:00", capacity = 0 } }
         });
 
@@ -126,7 +147,7 @@ public class ValidationTests : IClassFixture<IntegrationTestFactory>
         var response = await _admin.PostAsJsonAsync($"/api/organizations/{orgId}/events", new
         {
             title = "Service",
-            date = "2026-07-12",
+            date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)).ToString("yyyy-MM-dd"),
             slots = new[] { new { label = "Backwards", startTime = "10:00", endTime = "09:00", capacity = 2 } }
         });
 
@@ -141,7 +162,7 @@ public class ValidationTests : IClassFixture<IntegrationTestFactory>
         var response = await _admin.PostAsJsonAsync($"/api/organizations/{orgId}/events", new
         {
             title = "",
-            date = "2026-07-12",
+            date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)).ToString("yyyy-MM-dd"),
             slots = new[]
             {
                 new { label = "", startTime = "10:00", endTime = "10:00", capacity = 0 },
@@ -384,7 +405,7 @@ public class ValidationTests : IClassFixture<IntegrationTestFactory>
         var response = await _admin.PostAsJsonAsync($"/api/organizations/{orgId}/events", new
         {
             title = "   ",
-            date = "2026-07-12"
+            date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)).ToString("yyyy-MM-dd")
         });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -413,7 +434,7 @@ public class ValidationTests : IClassFixture<IntegrationTestFactory>
     [Fact]
     public void DbConflictDetector_RecognisesUniqueViolation()
     {
-        using var scope = _factory.Services.CreateScope();
+        using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var ex = Assert.Throws<DbUpdateException>(() =>
@@ -447,7 +468,7 @@ public class ValidationTests : IClassFixture<IntegrationTestFactory>
         // Insert a Signup that references a non-existent TimeSlotId. Real Postgres
         // raises SQLSTATE 23503 (foreign_key_violation) — this must be classified
         // as a client reference error (400), not a conflict (409).
-        using var scope = _factory.Services.CreateScope();
+        using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var ex = Assert.Throws<DbUpdateException>(() =>
@@ -535,7 +556,7 @@ public class ValidationTests : IClassFixture<IntegrationTestFactory>
         var resp = await _admin.PostAsJsonAsync($"/api/organizations/{orgId}/events", new
         {
             title = "Val Event",
-            date = "2026-07-12"
+            date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)).ToString("yyyy-MM-dd")
         });
         var body = await resp.Content.ReadFromJsonAsync<JsonElement>(_json);
         return body.GetProperty("id").GetGuid();
