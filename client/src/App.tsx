@@ -20,6 +20,9 @@ import { EditEvent } from "@/pages/admin/EditEvent"
 import { InvitePage } from "@/pages/public/InvitePage"
 import { LandingPage } from "@/pages/public/LandingPage"
 import { SignupManagePage } from "@/pages/public/SignupManagePage"
+import { TermsOfServicePage } from "@/pages/legal/TermsOfServicePage"
+import { PrivacyPolicyPage } from "@/pages/legal/PrivacyPolicyPage"
+import { Footer } from "@/components/Footer"
 import { cn } from "@/lib/utils"
 import { useOrg } from "@/hooks/useOrg"
 
@@ -138,9 +141,13 @@ function Shell() {
   const location = useLocation()
   const { isSignedIn } = useAuth()
   // Signed-out users only ever see the landing page (auth routes redirect
-  // to "/"), the invite page, or the signup-manage page.
+  // to "/"), the invite page, the signup-manage page, or the legal pages.
+  const isLegalPage =
+    location.pathname === "/terms-of-service" ||
+    location.pathname === "/privacy-policy"
   const isLanding =
     !isSignedIn &&
+    !isLegalPage &&
     !location.pathname.startsWith("/invite") &&
     !location.pathname.startsWith("/signup")
 
@@ -149,6 +156,8 @@ function Shell() {
       <Routes>
         <Route path="/invite/:code" element={<InvitePage />} />
         <Route path="/signup/manage/:token" element={<SignupManagePage />} />
+        <Route path="/terms-of-service" element={<TermsOfServicePage />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
         <Route path="/" element={<HomeRoute />} />
         <Route element={<RequireAuth />}>
           <Route path="/dashboard" element={<Dashboard />} />
@@ -168,6 +177,7 @@ export function App() {
       <Toaster richColors position="top-right" />
       <Header />
       <Shell />
+      <Footer />
     </div>
   )
 }
