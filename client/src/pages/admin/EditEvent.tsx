@@ -93,7 +93,8 @@ function EventForm({ event, eventId }: EventFormProps) {
     try {
       await api.updateEvent(eventId, {
         title,
-        description: description || null,
+        // Empty string clears the description; the backend normalizes it to null.
+        description: description.trim(),
         // Empty string clears the location; the backend normalizes it to null.
         location: location.trim(),
         date,
@@ -216,6 +217,7 @@ function EventForm({ event, eventId }: EventFormProps) {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Weekly Sunday service"
+              maxLength={2000}
             />
           </div>
 

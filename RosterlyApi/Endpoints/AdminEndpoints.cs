@@ -223,7 +223,7 @@ public static class AdminEndpoints
         if (request.Title is not null)
             evt.Title = request.Title;
         if (request.Description is not null)
-            evt.Description = request.Description;
+            evt.Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description;
         if (request.Location is not null)
             evt.Location = string.IsNullOrWhiteSpace(request.Location) ? null : request.Location;
         if (request.Date is not null) evt.Date = request.Date.Value;
@@ -504,7 +504,7 @@ public record CreateEventRequest(
 
 public record UpdateEventRequest(
     [property: NotWhitespace, StringLength(300)] string? Title,
-    [property: NotWhitespace, StringLength(2000)] string? Description,
+    [property: StringLength(2000)] string? Description,
     [property: StringLength(500)] string? Location,
     DateOnly? Date) : IValidatableObject
 {

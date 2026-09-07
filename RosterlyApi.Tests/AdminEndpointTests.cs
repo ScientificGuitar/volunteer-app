@@ -152,6 +152,40 @@ public class AdminEndpointTests : IClassFixture<IntegrationTestFactory>
     }
 
     [Fact]
+    public async Task UpdateEvent_EmptyDescription_ClearsDescription()
+    {
+        var orgId = await SeedOrgAsync("Clear Description Org");
+        var create = await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events",
+            new { title = "Described Event", description = "Old description", date = "2026-07-12" });
+        var created = await create.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        var eventId = created.GetProperty("id").GetGuid();
+
+        var response = await _client.PutAsJsonAsync($"/api/events/{eventId}",
+            new { description = "" });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        Assert.Equal(JsonValueKind.Null, body.GetProperty("description").ValueKind);
+    }
+
+    [Fact]
+    public async Task UpdateEvent_WhitespaceDescription_ClearsDescription()
+    {
+        var orgId = await SeedOrgAsync("Clear Whitespace Description Org");
+        var create = await _client.PostAsJsonAsync($"/api/organizations/{orgId}/events",
+            new { title = "Described Event", description = "Old description", date = "2026-07-12" });
+        var created = await create.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        var eventId = created.GetProperty("id").GetGuid();
+
+        var response = await _client.PutAsJsonAsync($"/api/events/{eventId}",
+            new { description = "   " });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        Assert.Equal(JsonValueKind.Null, body.GetProperty("description").ValueKind);
+    }
+
+    [Fact]
     public async Task DeleteEvent_RemovesEvent()
     {
         var orgId = await SeedOrgAsync("Delete Org");
