@@ -7,8 +7,6 @@ services:
       POSTGRES_USER: rosterly
       POSTGRES_PASSWORD: rosterly
       POSTGRES_DB: rosterly
-    ports:
-      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -23,8 +21,8 @@ services:
       dockerfile: Dockerfile
     container_name: rosterly-api
     restart: unless-stopped
-    ports:
-      - "8080:8080"
+    expose:
+      - "8080"
     environment:
       ASPNETCORE_URLS: http://+:8080
       ASPNETCORE_ENVIRONMENT: Production
@@ -54,11 +52,23 @@ services:
         VITE_CLERK_PUBLISHABLE_KEY: "${VITE_CLERK_PUBLISHABLE_KEY}"
     container_name: rosterly-client
     restart: unless-stopped
-    ports:
-      - "80:80"
+    # Uncomment for local debug without Cloudflare:
+    # ports:
+    #   - "127.0.0.1:${FRONTEND_PORT:-8081}:80"
     depends_on:
       backend:
         condition: service_healthy
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: rosterly-tunnel
+    restart: unless-stopped
+    environment:
+      TUNNEL_TOKEN: "${CLOUDFLARE_TUNNEL_TOKEN}"
+    command: ["tunnel", "--no-autoupdate", "run"]
+    depends_on:
+      frontend:
+        condition: service_started
 
 volumes:
   pgdata:
